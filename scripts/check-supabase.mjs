@@ -1,0 +1,13 @@
+process.loadEnvFile('.env.local');
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const key = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+if (!url || !key) throw new Error('Falta configurar .env.local.');
+const headers = { apikey: key, Authorization: `Bearer ${key}` };
+const settings = await fetch(`${url}/auth/v1/settings`, { headers });
+console.log('Supabase Auth:', settings.status);
+if (!settings.ok) process.exitCode = 1;
+const check = await fetch(`${url}/rest/v1/sucursales?select=id&limit=0`, { headers });
+const body = await check.json();
+console.log('Comprobación anónima del esquema:', check.status, Array.isArray(body) ? 'consulta permitida; verificar RLS' : body.code || 'sin detalle');
+if (body.code === 'PGRST205') process.exitCode = 1;
+if (check.status === 401 || check.status === 403) console.log('La base exige una sesión autenticada, como se espera.');
