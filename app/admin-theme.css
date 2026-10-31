@@ -589,8 +589,8 @@
   .app-shell .dashboard-select select { max-width:170px; border:0; outline:0; appearance:none; background:transparent; color:#f2f3f5; font:600 11px var(--font); }
   .app-shell .dashboard-select option,.app-shell .select-wrap select option,.app-shell select option { color:#f5f5f5; background:#171a1f; }
   .app-shell .dashboard-select svg:last-child { margin-left:2px; }
-  .app-shell .dashboard-garnish { position:absolute; top:-143px; right:45px; z-index:1; width:min(560px,45vw); height:245px; pointer-events:none; opacity:.7; overflow:hidden; -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 21%,#000 82%,transparent 100%); mask-image:linear-gradient(90deg,transparent 0%,#000 21%,#000 82%,transparent 100%); }
-  .app-shell .dashboard-garnish img { object-fit:cover; object-position:60% 48%; filter:saturate(1.13) contrast(1.08); }
+  .app-shell .dashboard-garnish { position:absolute; top:-59px; right:160px; z-index:1; width:min(590px,48vw); height:178px; pointer-events:none; opacity:.88; overflow:visible; }
+  .app-shell .dashboard-garnish img { object-fit:contain; object-position:center top; }
   .app-shell .stats-grid { gap:14px; }
   .app-shell .stat-card { min-width:0; min-height:137px; padding:17px 18px 15px; border:1px solid #ffffff12; border-radius:15px; background:linear-gradient(140deg,#171b20,#121519); box-shadow:0 8px 23px #0003; transition:transform .18s ease,border-color .18s ease,box-shadow .18s ease; }
   .app-shell .stat-card:hover { transform:translateY(-2px); border-color:#ed1c2e45; box-shadow:0 12px 28px #0005; }
@@ -720,7 +720,7 @@
   @media (max-width:1000px) {
     .app-shell .sidebar { width:224px; }
     .app-shell .main-shell { margin-left:224px; }
-    .app-shell .dashboard-garnish { right:0; width:380px; opacity:.45; }
+    .app-shell .dashboard-garnish { right:135px; width:430px; height:150px; opacity:.58; }
     .app-shell .charts-grid { grid-template-columns:1fr; }
     .app-shell .charts-grid .panel { min-height:280px; }
     .app-shell .payment-visual { min-height:210px; }
@@ -737,7 +737,7 @@
     .app-shell .dashboard-heading-actions { width:100%; }
     .app-shell .dashboard-select { flex:1; min-width:0; }
     .app-shell .dashboard-select select { max-width:none; min-width:0; flex:1; }
-    .app-shell .dashboard-garnish { top:-49px; right:-45px; width:220px; height:150px; opacity:.16; }
+    .app-shell .dashboard-garnish { top:-25px; right:45px; width:185px; height:118px; opacity:.17; }
     .app-shell .stats-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
     .app-shell .stat-card { min-height:122px; padding:12px; }
     .app-shell .stat-top { gap:7px; flex-wrap:wrap; }
@@ -772,5 +772,15 @@
     .app-shell .stat-top { flex-wrap:nowrap; }
     .app-shell .dashboard-garnish { width:155px; opacity:.12; }
     .app-shell .payment-visual { justify-content:space-around; }
+  }
+}
+
+@media screen {
+  .app-shell .topbar > .breadcrumb,.app-shell .topbar > .topbar-actions { position:relative; z-index:2; }
+  .app-shell .sidebar-promo { min-height:0; height:110px; padding:0; }
+  .app-shell .sidebar-promo > img { z-index:0; object-fit:cover; object-position:left center; }
+  @media (max-width:760px) {
+    .app-shell .dashboard-garnish { right:110px; width:140px; height:100px; }
+    .app-shell .sidebar-promo { height:100px; }
   }
 }
