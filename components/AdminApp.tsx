@@ -89,7 +89,7 @@ export default function AdminApp({ section }: { section: string }) {
     } catch { setNeedsRefresh(true); setMutationError('No se pudo confirmar el resultado. Actualiza los datos antes de reintentar para evitar duplicados.'); setNotice('No se pudo confirmar el resultado. Actualiza los datos antes de reintentar para evitar duplicados.'); return false; }
     finally { savingRef.current = false; setSaving(false); }
   }
-  if (!data) return <div className="loading"><ChefHat size={42} /><p>{loadError || 'Cargando desde Supabase…'}</p>{loadError && <><button className="button" onClick={refresh}>Reintentar</button><form action={signOut}><button className="button">Volver a iniciar sesión</button></form></>}</div>;
+  if (!data) return <div className="loading"><ChefHat size={42} /><p>{loadError || 'Cargando…'}</p>{loadError && <><button className="button" onClick={refresh}>Reintentar</button><form action={signOut}><button className="button">Volver a iniciar sesión</button></form></>}</div>;
   const current = navigation.find(n => n.id === section)!;
   const branchName = (id: string) => data.branches.find(b => b.id === id)?.name || 'Sin sucursal';
   const inBranch = (item: { branch: string }) => branch === 'all' || item.branch === branch;
