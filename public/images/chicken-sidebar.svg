@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="390" viewBox="0 0 520 390" fill="none">
+  <defs><linearGradient id="roast" x1="116" y1="82" x2="403" y2="319" gradientUnits="userSpaceOnUse"><stop stop-color="#ffd37a"/><stop offset=".33" stop-color="#cc5d1c"/><stop offset=".68" stop-color="#622312"/><stop offset="1" stop-color="#eeaa43"/></linearGradient><linearGradient id="hot" x1="105" y1="287" x2="475" y2="343" gradientUnits="userSpaceOnUse"><stop stop-color="#d51c1b"/><stop offset="1" stop-color="#ff7b20"/></linearGradient><filter id="glow" x="10" y="9" width="500" height="383" color-interpolation-filters="sRGB" filterUnits="userSpaceOnUse"><feGaussianBlur stdDeviation="18"/></filter></defs>
+  <ellipse cx="275" cy="303" rx="185" ry="56" fill="#ed2b19" opacity=".36" filter="url(#glow)"/>
+  <path d="M66 269c53-70 292-93 393-18 27 20 12 54-30 72-102 43-288 34-359-8-26-15-24-29-4-46Z" fill="#242120" stroke="#5a4133" stroke-width="4"/>
+  <path d="M101 276c80-41 231-52 327-15" stroke="#ba7337" stroke-opacity=".6" stroke-width="4" stroke-linecap="round"/>
+  <g fill="#5f8c32" stroke="#83ad45" stroke-width="4" stroke-linejoin="round"><path d="M95 224c-38-30-37-65-1-91 42 24 50 55 1 91Z"/><path d="m96 210-3-51"/><path d="M379 233c6-46 34-67 68-51-2 43-27 63-68 51Z"/><path d="m393 222 39-29"/><path d="M330 127c-30-24-27-51 5-69 32 22 34 46-5 69Z"/><path d="m334 118 6-40"/></g>
+  <path d="M146 153c-8-46 37-78 96-85 55-6 113 22 139 58 22 31 18 74-12 95-19 13-42 9-63 6-19-3-36 17-65 25-60 17-103-20-95-60 3-15 4-25 0-39Z" fill="url(#roast)" stroke="#4c1e12" stroke-width="10" stroke-linejoin="round"/>
+  <path d="M179 151c18-31 42-49 73-54 25-4 50 2 70 17-28 8-50 33-54 60-2 16 4 31 15 43-39 24-83 18-103-7-12-15-13-38-1-59Z" fill="#f5b247"/>
+  <path d="M294 113c28 15 48 42 48 66-1 17-11 31-29 42-11-23-13-49-3-71 6-14 0-26-16-37Z" fill="#6c2a15"/>
+  <path d="M207 123c12-13 26-21 42-24m-62 78c-2 16 4 29 18 39m87-91c15 13 22 28 20 44" stroke="#ffe4a3" stroke-opacity=".75" stroke-width="7" stroke-linecap="round"/>
+  <path d="M186 222c-19 16-34 36-24 52 8 13 25 15 42 3l42-29m79-9c17-5 34 2 47 12l28 22c13 11 29 8 33-3 5-14-8-27-22-34l-49-25" fill="url(#roast)" stroke="#4c1e12" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m161 275-15 10m102-35-17 12m145-30 20 15" stroke="#ffd37c" stroke-width="5" stroke-linecap="round"/>
+  <path d="M144 321c92 28 246 28 328-4" stroke="url(#hot)" stroke-width="5" stroke-linecap="round"/>
+</svg>
