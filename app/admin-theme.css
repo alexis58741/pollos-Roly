@@ -533,6 +533,7 @@
   .app-shell .brand b { color: #ff2b36; }
   .app-shell .brand-icon { display: grid; place-items: center; flex: 0 0 54px; width: 54px; height: 54px; border: 3px double #ff3038; border-radius: 50%; color: #fff; background: radial-gradient(circle,#270b0e 56%,#d91120 58%,#20080a 67%); box-shadow: 0 0 18px #ed1c2e55; }
   .app-shell .brand-icon svg { width: 26px; height: 26px; }
+  .app-shell .brand-logo { display:block; flex:0 0 58px; width:58px; height:58px; border:2px solid #fff; border-radius:50%; object-fit:cover; box-shadow:0 0 17px #ed1c2e55; }
   .app-shell .brand small { margin-top: 6px; color: #a99ca0; letter-spacing: 2.8px; }
   .app-shell .workspace { margin-top: 20px; border-color: #ffffff16; background: #ffffff08; color: #f4f0ed; }
   .app-shell .workspace small,.app-shell .profile small { color: #989ca5; }
@@ -556,6 +557,7 @@
   .app-shell .sidebar-promo>p b { color: #ff3b45; }
   .app-shell .sidebar .profile { margin: 12px -18px 0; padding: 12px 18px 14px; border-top-color: #ffffff15; color: #f3f4f6; }
   .app-shell .sidebar .profile .avatar,.app-shell .top-user .avatar { border: 1px solid #ff5a62; box-shadow: 0 0 15px #ed1c2e40; color: #fff; background: linear-gradient(145deg,#ed1c2e,#9b0812); }
+  .app-shell .top-user .top-brand-logo { display:block; flex:0 0 40px; width:40px; height:40px; border:2px solid #fff; border-radius:50%; padding:0; object-fit:cover; box-shadow:0 0 17px #ed1c2e55; background:#cf0505; }
   .app-shell .sidebar .profile .icon-button { color: #c6c0c2; }
   .app-shell .main-shell { margin-left: 282px; background: #090b0e; }
   .app-shell .topbar { position: relative; z-index: 4; height: 78px; padding: 0 28px; background: #0c0e11; border-bottom: 1px solid #ffffff0c; }
