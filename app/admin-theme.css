@@ -777,6 +777,8 @@
 
 @media screen {
   .app-shell .topbar > .breadcrumb,.app-shell .topbar > .topbar-actions { position:relative; z-index:2; }
+  .app-shell .charts-grid .panel { background:linear-gradient(145deg,#15191e,#111418); }
+  .app-shell .dashboard-orders-panel,.app-shell .dashboard-lower-grid .panel { background:linear-gradient(145deg,#15191e,#111418); }
   .app-shell .sidebar-promo { min-height:0; height:110px; padding:0; }
   .app-shell .sidebar-promo > img { z-index:0; object-fit:cover; object-position:left center; }
   @media (max-width:760px) {
