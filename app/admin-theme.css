@@ -571,8 +571,16 @@
   .app-shell .notification i { background: #ff2936; box-shadow: 0 0 0 3px #0c0e11; }
   .app-shell .top-divider { background: #ffffff17; }
   .app-shell .top-user { gap: 10px; color: #f4f4f5; font-size: 12px; }
+  .app-shell .account-menu-wrap { position: relative; z-index: 12; }
+  .app-shell button.top-user { display: flex; align-items: center; gap: 10px; padding: 5px 7px; border: 1px solid transparent; border-radius: 12px; color: #f4f4f5; background: transparent; font: inherit; text-align: left; cursor: pointer; }
+  .app-shell button.top-user:hover,.app-shell button.top-user[aria-expanded="true"] { border-color: #ffffff18; background: #ffffff0a; }
   .app-shell .top-user small { color: #a2a7b0; font-size: 10px; }
   .app-shell .top-user>svg { color: #c7c9ce; }
+  .app-shell .account-menu { position: absolute; top: calc(100% + 9px); right: 0; z-index: 30; min-width: 176px; padding: 5px; border: 1px solid #ffffff1a; border-radius: 11px; background: #171a1f; box-shadow: 0 14px 36px #0009; }
+  .app-shell .account-menu form { margin: 0; }
+  .app-shell .account-menu button { display: flex; align-items: center; gap: 9px; width: 100%; padding: 10px 11px; border: 0; border-radius: 7px; color: #f3f4f6; background: transparent; font: inherit; font-size: 12px; text-align: left; cursor: pointer; }
+  .app-shell .account-menu button:hover { color: #fff; background: #ed1c2e28; }
+  .app-shell .account-menu button svg { color: #ff626c; }
   .app-shell main { position: relative; overflow: hidden; padding: 21px 28px 0; background: radial-gradient(ellipse at 98% 4%,#32101455 0,transparent 36%),#090b0e; }
   .app-shell .connected-banner { background: #15191e; border-color: #ffffff14; color: #d4d8de; }
   .app-shell .page-heading { padding: 12px 0 19px; }
