@@ -786,3 +786,72 @@
     .app-shell .sidebar-promo { height:100px; }
   }
 }
+
+@media screen {
+  /* Readable dark surfaces for every admin module, including rules in globals.css. */
+  .app-shell .attendance-admin-toolbar { border-color:#ffffff14; background:#15191e; }
+  .app-shell .attendance-admin-date,.app-shell .attendance-admin-branch { border-color:#ffffff1a; color:#c5cbd3; background:#1b1f24; }
+  .app-shell .attendance-admin-date input,.app-shell .attendance-admin-branch select { color:#f1f3f5; }
+  .app-shell .attendance-admin-search { border-color:#ffffff1a; background:#1b1f24; }
+  .app-shell .attendance-admin-search input { color:#f1f3f5; }
+  .app-shell .attendance-admin-search input::placeholder { color:#9ca3af; }
+
+  .app-shell .module-toolbar .compact-label { color:#c4cad2; }
+  .app-shell .module-toolbar .compact-label input,.app-shell .module-toolbar .compact-label select { border-color:#ffffff1b; color:#f3f4f6; background:#191d22; }
+  .app-shell .report-print-area { color:#e7e9ed; }
+  .app-shell .report-kpi,.app-shell .report-kpi-balance { border-color:#ffffff15; border-top-color:#ed1c2e; background:#171b20; }
+  .app-shell .report-kpi-balance { border-top-color:#22c55e; background:#142019; }
+  .app-shell .report-kpi>span { color:#b5bdc8; }
+  .app-shell .report-kpi>strong { color:#fff; }
+  .app-shell .report-kpi>small,.app-shell .report-disclaimer { color:#9ca5b1; }
+  .app-shell .report-block-title { border-color:#ffffff14; background:#21191b; color:#f5f6f8; }
+  .app-shell .report-block-title>span { background:#ed1c2e; color:#fff; }
+  .app-shell .report-block .table-scroll { border-color:#ffffff13; background:#14181c; }
+  .app-shell .report-block .table-scroll table td { color:#c4cad2; border-color:#ffffff10; }
+  .app-shell .report-cell-detail { color:#9ca5b1; }
+
+  .app-shell .product-card { border-color:#ffffff15; background:#15191e; }
+  .app-shell .product-body h2 { color:#f4f5f7; }
+  .app-shell .product-body>small { color:#a4acb7; }
+  .app-shell .product-description { color:#aab1bb; }
+  .app-shell .product-body .edit-button { color:#bec4cc; }
+  .app-shell .product-body .edit-button:hover { color:#ff626c; }
+  .app-shell .menu-view-tabs { border-color:#ffffff17; background:#15191e; }
+  .app-shell .menu-view-tabs button { color:#b9c0ca; }
+  .app-shell .menu-view-tabs button[aria-selected=true] { color:#ff737b; background:#ed1c2e24; }
+  .app-shell .category-card { border-color:#ffffff15; background:#15191e; }
+  .app-shell .category-symbol { border-color:#ffffff17; background:#20242a; }
+  .app-shell .category-info h2 { color:#f4f5f7; }
+  .app-shell .category-info p { color:#a3aab4; }
+  .app-shell .category-actions button { color:#d1d5db; background:#20242a; }
+
+  .app-shell .purchase-modal { border-color:#ffffff1b; color:#f3f4f5; background:#111418; }
+  .app-shell .purchase-heading { border-color:#ffffff14; }
+  .app-shell .purchase-heading h2 { color:#fff; }
+  .app-shell .purchase-modal label { color:#c4cad2; }
+  .app-shell .purchase-modal input,.app-shell .purchase-modal textarea,.app-shell .purchase-modal select { border-color:#ffffff1b; color:#f2f4f6; background:#1b1f24; }
+  .app-shell .purchase-modal input::placeholder,.app-shell .purchase-modal textarea::placeholder { color:#939ba7; }
+  .app-shell .purchase-modal input:disabled,.app-shell .purchase-modal select:disabled { color:#929aa6; background:#20242a; }
+  .app-shell .purchase-date small,.app-shell .purchase-hint { color:#a5adb8; }
+  .app-shell .purchase-add-panel,.app-shell .purchase-detail { border-color:#ffffff17; background:#171b20; }
+  .app-shell .purchase-add-panel h3,.app-shell .purchase-detail h3 { color:#f5f6f8; }
+  .app-shell .purchase-detail-heading,.app-shell .purchase-item,.app-shell .purchase-total { border-color:#ffffff13; }
+  .app-shell .purchase-count { border-color:#735817; color:#ffcf65; background:#2b2415; }
+  .app-shell .purchase-empty { color:#aab2bd; }
+  .app-shell .purchase-item strong,.app-shell .purchase-item b { color:#f1f3f5; }
+  .app-shell .purchase-item small { color:#a3abb6; }
+  .app-shell .purchase-total>strong { color:#c8ced6; }
+  .app-shell .purchase-total output { color:#ffbd35; }
+  .app-shell .purchase-footer { border-color:#ffffff15; background:#111418; }
+  .app-shell .purchase-notes { color:#c4cad2; }
+
+  .app-shell .cash-card .mini-stats .stat-card { border:1px solid #ffffff14; background:#1b1f24; }
+  .app-shell .cash-card .mini-stats .stat-card>p { color:#a6aeb9; }
+  .app-shell .cash-card .mini-stats .stat-card>strong { color:#f5f6f8; }
+  .app-shell .mini-stats .stat-card { border-color:#ffffff15; background:#171b20; }
+  .app-shell .mini-stats .stat-card>p { color:#a6aeb9; }
+  .app-shell .mini-stats .stat-card>strong { color:#f5f6f8; }
+  .app-shell .confirm-bar { border-color:#7b392f; color:#f3d1c9; background:#2a1918; }
+  .app-shell .form-footer { color:#c1c7d0; background:#171b20; }
+  .app-shell .form-footer>span { color:#9ca5b1; }
+}
