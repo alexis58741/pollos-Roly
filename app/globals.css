@@ -36,3 +36,95 @@ main{max-width:1680px;margin:auto;padding:24px 36px 0}.demo-banner{border:1px so
 .attendance-page{min-height:100dvh;max-width:none;padding:0 28px 35px;background:#f7f8fa}.attendance-header{height:76px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #e9edf0;max-width:1040px;margin:0 auto}.attendance-brand{display:flex;gap:11px;align-items:center;font-family:Manrope,var(--font);font-size:15px;font-weight:800;letter-spacing:-.3px}.attendance-brand small{display:block;font:600 8px var(--font);color:#989fa8;letter-spacing:1.5px;margin-top:4px}.attendance-brand-mark{display:grid;place-items:center;width:38px;height:38px;background:#fff1e6;border:1px solid #f4ddc9;border-radius:12px;color:#dd702f;font-size:19px}.attendance-header .button{font-size:11px}.attendance-card{max-width:580px;margin:65px auto 0;padding:34px;background:white;border:1px solid #e9edf0;border-radius:18px;box-shadow:0 12px 50px #27333c08}.attendance-greeting{text-align:center}.attendance-icon{width:52px;height:52px;border-radius:16px;display:grid;place-items:center;margin:0 auto 18px;background:#fff2e8;color:#d87639}.attendance-greeting .eyebrow{margin-bottom:8px}.attendance-greeting h1{font-size:27px;overflow-wrap:anywhere}.attendance-greeting .subtitle{margin-top:8px}.attendance-start{margin-top:30px;padding:24px;border:1px solid #eceff2;background:#fbfcfd;border-radius:13px;text-align:center}.attendance-start p{display:flex;align-items:center;justify-content:center;gap:9px;color:#79828e;font-size:12px;line-height:1.7}.attendance-start p svg{color:#d87639;flex:none}.attendance-start .button{margin-top:20px;padding:13px 22px}.attendance-camera{position:relative;overflow:hidden;margin-top:25px;aspect-ratio:4/3;background:#1f252b;border-radius:14px}.attendance-camera video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}.attendance-camera-prompt{position:absolute;inset:auto 0 0;padding:40px 20px 18px;display:flex;flex-direction:column;gap:5px;color:white;background:linear-gradient(transparent,#101419df)}.attendance-camera-prompt span{font-size:9px;letter-spacing:1.5px;color:#ffd2ae;font-weight:700}.attendance-camera-prompt strong{font-size:16px}.attendance-camera-prompt small{font-size:11px;color:#e0e2e5}.attendance-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px;margin-top:17px}.attendance-actions .button{padding:12px 16px}.attendance-preview{position:relative;overflow:hidden;margin-top:25px;max-height:310px;border-radius:13px;background:#f1f3f5}.attendance-preview img{display:block;width:100%;max-height:310px;object-fit:contain}.attendance-preview span{position:absolute;right:10px;bottom:10px;display:flex;align-items:center;gap:6px;padding:7px 10px;border-radius:7px;background:#fff;color:#628b6d;font-size:10px;font-weight:650}.attendance-done{text-align:center;padding:42px 12px 15px}.attendance-done>span{width:58px;height:58px;display:grid;place-items:center;margin:0 auto 18px;background:#edf7ef;border-radius:50%;color:#4c9b61}.attendance-done h2{font-size:20px}.attendance-done p{margin-top:9px;color:#8a929c;font-size:12px}.attendance-done strong{color:#444d58}.attendance-saved-time{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:15px;color:#708776;font-size:11px}.attendance-error,.attendance-alert{display:flex;align-items:flex-start;gap:9px;margin-top:19px;padding:12px;border-radius:8px;font-size:11px;line-height:1.7}.attendance-error{background:#fff0ed;color:#af4633}.attendance-alert{background:#fff8e9;color:#98743d}.attendance-error svg,.attendance-alert svg{flex:none;margin-top:1px}.attendance-alert code{font-size:10px}.attendance-privacy{margin-top:24px;padding-top:17px;border-top:1px solid #eef0f2;text-align:center;color:#a1a7af;font-size:10px;line-height:1.7}.attendance-spin{animation:attendance-spin 1s linear infinite}@keyframes attendance-spin{to{transform:rotate(360deg)}}
 @media(max-width:600px){.attendance-page{padding:0 15px 24px}.attendance-header{height:64px}.attendance-card{margin-top:28px;padding:23px 18px;border-radius:14px}.attendance-greeting h1{font-size:23px}.attendance-start{padding:20px 14px}.attendance-actions{flex-direction:column-reverse}.attendance-actions .button{width:100%}.attendance-camera{aspect-ratio:3/4}.attendance-done{padding-top:35px}}
 .attendance-message{display:flex;align-items:flex-start;gap:8px;margin-top:13px;padding:11px 12px;border:1px solid #eee8de;background:#fffaf2;border-radius:8px;color:#8d744f;font-size:11px;line-height:1.6}.attendance-message svg{flex:none;margin-top:1px}.attendance-consent{display:flex;align-items:flex-start;gap:10px;padding:13px;background:#fffaf0;border:1px solid #f2e4c6;border-radius:9px;color:#6c6254!important;text-align:left;font-size:11px!important;line-height:1.7;font-weight:500!important}.attendance-consent input{flex:none;margin:2px 0 0;width:16px;height:16px;accent-color:var(--orange)}.attendance-start>.button{margin-top:20px}.attendance-start:has(.attendance-consent)>.button{margin-top:15px}
+
+/* Adaptación común para móviles pequeños, tablets y pantallas táctiles. */
+html,body{max-width:100%;overflow-x:clip}
+.app-shell,.main-shell,.cashier-page,.attendance-page{min-width:0;max-width:100%}
+.app-shell main,.app-shell .page-heading,.app-shell .filter-row,.app-shell .panel,.cashier-page>*{min-width:0}
+.table-scroll,.cashier-table-wrap{max-width:100%;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.modal,.purchase-modal,.user-create-modal{max-width:calc(100vw - 32px);max-height:calc(100dvh - 32px);overscroll-behavior:contain}
+img,video,canvas,svg{max-width:100%}
+
+@media(max-width:1000px){
+  .app-shell .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-shell .lower-grid{grid-template-columns:minmax(0,1fr)}
+  .app-shell .charts-grid{grid-template-columns:minmax(0,1fr)}
+  .app-shell .report-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-shell .dashboard-orders-table{overflow-x:auto}
+  .app-shell .module-toolbar{align-items:stretch}
+  .app-shell .module-toolbar>.search-field{flex:1 1 260px}
+  .app-shell .module-toolbar>.compact-label{flex:1 1 150px}
+}
+@media(max-width:760px){
+  .app-shell .filter-row{align-items:stretch;flex-direction:column}
+  .app-shell .filter-row>.filters,.app-shell .filter-row>.select-wrap{width:100%;min-width:0}
+  .app-shell .filters{display:flex;flex-wrap:wrap;gap:8px}
+  .app-shell .filters>*{flex:1 1 140px;min-width:0}
+  .app-shell .heading-actions{width:100%;display:flex;flex-wrap:wrap}
+  .app-shell .heading-actions>.button{flex:1 1 150px;min-width:0}
+  .app-shell .module-toolbar>.search-field{flex:1 1 100%;min-width:0}
+  .app-shell .module-toolbar>.compact-label{flex:1 1 145px;min-width:0}
+  .app-shell .modal-heading{gap:10px}
+  .app-shell .modal-footer,.app-shell .form-footer{flex-wrap:wrap;gap:9px}
+  .app-shell .modal-footer>.button,.app-shell .form-footer>.button{flex:1 1 140px;justify-content:center}
+  .cashier-page .cashier-header{min-width:0}
+  .cashier-page .cashier-header-user{gap:6px}
+  .cashier-page .cashier-tabs{overflow-x:auto;overscroll-behavior-x:contain}
+  .cashier-page .cashier-tabs button{white-space:nowrap}
+}
+@media(max-width:520px){
+  .app-shell main{padding-left:12px;padding-right:12px}
+  .app-shell .page-heading h1{font-size:clamp(22px,7vw,28px);overflow-wrap:anywhere}
+  .app-shell .subtitle{max-width:100%;line-height:1.6}
+  .app-shell .connected-banner{align-items:flex-start;gap:10px;flex-wrap:wrap}
+  .app-shell .connected-banner>span{min-width:0;overflow-wrap:anywhere}
+  .app-shell .connected-banner .button{margin-left:auto}
+  .app-shell .stats-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .app-shell .stat-card{min-width:0;padding:10px}
+  .app-shell .stat-card>strong{font-size:clamp(16px,5vw,20px);overflow-wrap:anywhere}
+  .app-shell .stat-label{overflow-wrap:anywhere}
+  .app-shell .payment-visual{flex-wrap:wrap;justify-content:center}
+  .app-shell .payment-legend{flex:1 1 100%;min-width:0}
+  .app-shell .payment-legend-row{justify-content:space-between}
+  .app-shell .dashboard-heading-actions{flex-wrap:wrap}
+  .app-shell .dashboard-select{flex:1 1 100%;min-width:0}
+  .app-shell .pagination{align-items:flex-start;flex-direction:column}
+  .app-shell .pagination>div{align-self:flex-end}
+  .app-shell .report-kpis{grid-template-columns:1fr}
+  .app-shell .report-print-area .report-kpi{padding:12px}
+  .app-shell .report-block-title{font-size:11px}
+  .app-shell .report-block .table-scroll table{min-width:560px}
+  .cashier-page{padding-left:10px;padding-right:10px}
+  .cashier-page .cashier-header{margin-left:-10px;margin-right:-10px;padding-left:10px;padding-right:10px}
+  .cashier-page .cashier-welcome{align-items:flex-start;flex-direction:column;gap:10px}
+  .cashier-page .cashier-welcome p:not(.eyebrow){max-width:none}
+  .cashier-page .cashier-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cashier-page .cashier-catalog,.cashier-page .cashier-cart,.cashier-page .cashier-recent,.cashier-page .cashier-cash-card{padding:12px}
+  .cashier-page .cashier-product-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cashier-page .cashier-product{min-width:0}
+  .cashier-page .cashier-shift-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cashier-page .cashier-shift-summary article:last-child{grid-column:1/-1}
+  .cashier-page .cashier-sold-list>div{grid-template-columns:minmax(0,1fr) auto;gap:6px}
+  .cashier-page .cashier-sold-list>div b{grid-column:2}
+  .cashier-page .cashier-order-history article{min-width:0}
+  .cashier-page .cashier-cash-numbers{grid-template-columns:1fr}
+  .attendance-page{padding-left:12px;padding-right:12px}
+  .attendance-card{padding:20px 14px}
+  .attendance-greeting h1{font-size:clamp(20px,7vw,24px)}
+  .attendance-start{padding:16px 11px}
+  .attendance-header .button{padding:9px 10px}
+}
+@media(max-width:360px){
+  .app-shell .stats-grid,.cashier-page .cashier-stats,.cashier-page .cashier-product-grid{grid-template-columns:1fr}
+  .app-shell .stat-card{min-height:94px}
+  .app-shell .heading-actions>.button{flex-basis:100%}
+  .cashier-page .cashier-tabs button{padding:8px 6px;font-size:8px}
+  .cashier-page .cashier-shift-summary{grid-template-columns:1fr}
+  .cashier-page .cashier-shift-summary article:last-child{grid-column:auto}
+  .attendance-header{gap:6px}
+  .attendance-brand{font-size:12px}
+}
+@media(hover:none) and (pointer:coarse){
+  button,a,select,input[type="checkbox"]{touch-action:manipulation}
+  .app-shell .nav-link,.cashier-page button,.attendance-page button{min-height:40px}
+}
