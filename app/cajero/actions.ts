@@ -4,17 +4,23 @@ import { revalidatePath } from 'next/cache';
 import { requireCashier } from '../../lib/supabase/server';
 import { localDate } from '../../lib/data';
 
-export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; snack: boolean; stock: number | null };
-export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; payments: { method: string; amount: number }[]; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number }[] };
+export type ChickenCustomization = { piece: 'Pechuga' | 'Ala' | 'Pierna' | 'Contra'; preparation: 'Brasa' | 'Broaster' | 'Espiedo'; accompaniments: ('Arroz' | 'Fideo' | 'Papa')[] };
+export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; snack: boolean; stock: number | null; requiresChoices: boolean; pieceType: 'leg_thigh' | 'breast_wing' | 'all' };
+export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; payments: { method: string; amount: number }[]; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number; customizations: ChickenCustomization[] }[] };
 export type CashierSnapshot = {
   profileName: string; branchId: string; branchName: string; businessName: string;
   products: CashierProduct[]; shift: { id: string; opening: number; openedAt: string; notes: string } | null;
   todayTotal: number; todayTickets: number; expectedCash: number; recentOrders: CashierOrder[];
 };
 
+function customizationLabel(choice: ChickenCustomization) {
+  return `${choice.piece} ${choice.preparation}${choice.accompaniments.length ? ` · ${choice.accompaniments.join(', ')}` : ' · Sin acompañamientos'}`;
+}
+
 function message(error: { message?: string; code?: string } | null, fallback: string) {
   if (error?.code === '42501') return 'No tienes permiso para esta operación. Confirma que ejecutaste database/11_cajero.sql en Supabase.';
-  if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan funciones de caja o pedidos. Ejecuta database/11_cajero.sql, database/12_cajero_pedidos.sql y database/13_cajero_pagos_mixtos.sql en Supabase.';
+  if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan funciones de caja o pedidos. Ejecuta database/11_cajero.sql, database/12_cajero_pedidos.sql, database/13_cajero_pagos_mixtos.sql y database/14_personalizacion_pollo.sql en Supabase.';
+  if (error?.code === 'PGRST204' || error?.code === '42703') return 'Falta la columna de personalización del pedido. Ejecuta database/14_personalizacion_pollo.sql en Supabase.';
   return error?.message || fallback;
 }
 
@@ -25,7 +31,7 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
       db.from('sucursales').select('id,nombre,activa').eq('id', profile.sucursal_id).maybeSingle(),
       db.from('configuracion').select('nombre').eq('id', 1).maybeSingle(),
       db.from('categorias').select('id,nombre,activa').eq('activa', true),
-      db.from('productos').select('id,nombre,categoria_id,precio,precio_oferta,en_oferta,foto_path,orden,activo').eq('activo', true).order('orden').order('nombre'),
+      db.from('productos').select('id,nombre,categoria_id,precio,precio_oferta,en_oferta,foto_path,orden,activo,requiere_seleccion,tipo_presas').eq('activo', true).order('orden').order('nombre'),
       db.from('turnos_caja').select('id,fondo_inicial,apertura,observaciones').eq('sucursal_id', profile.sucursal_id).is('cierre', null).maybeSingle(),
     ]);
     for (const result of [branchResult, settingResult, categoryResult, productResult, shiftResult]) if (result.error) throw new Error(message(result.error, 'No se pudieron cargar los datos del cajero.'));
@@ -40,7 +46,7 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
       const category = categories.get(String(p.categoria_id));
       if (!category) return [];
       const snack = category.trim().toLowerCase() === 'snacks';
-      return [{ id: String(p.id), name: String(p.nombre), category, price: Number(p.precio), salePrice: p.precio_oferta == null ? null : Number(p.precio_oferta), onSale: p.en_oferta === true, photoPath: String(p.foto_path || ''), sortOrder: Number(p.orden || 1), snack, stock: snack ? snacks.get(String(p.id)) ?? 0 : null }];
+      return [{ id: String(p.id), name: String(p.nombre), category, price: Number(p.precio), salePrice: p.precio_oferta == null ? null : Number(p.precio_oferta), onSale: p.en_oferta === true, photoPath: String(p.foto_path || ''), sortOrder: Number(p.orden || 1), snack, stock: snack ? snacks.get(String(p.id)) ?? 0 : null, requiresChoices: p.requiere_seleccion === true, pieceType: (p.tipo_presas || 'all') as CashierProduct['pieceType'] }];
     });
 
     const dayStart = `${localDate()}T00:00:00-04:00`;
@@ -56,13 +62,13 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
     }
     const orderIds = (orderRows || []).map(o => String(o.id));
     const [detailResult, paymentResult, movementResult] = await Promise.all([
-      orderIds.length ? db.from('detalle_pedido').select('pedido_id,producto_id,nombre_producto,cantidad,subtotal').in('pedido_id', orderIds) : Promise.resolve({ data: [], error: null }),
+      orderIds.length ? db.from('detalle_pedido').select('pedido_id,producto_id,nombre_producto,cantidad,subtotal,personalizacion').in('pedido_id', orderIds) : Promise.resolve({ data: [], error: null }),
       orderIds.length ? db.from('pagos_pedido').select('pedido_id,metodo,monto').in('pedido_id', orderIds) : Promise.resolve({ data: [], error: null }),
       shiftResult.data ? db.from('movimientos_caja').select('tipo,monto').eq('turno_id', shiftResult.data.id) : Promise.resolve({ data: [], error: null }),
     ]);
     if (detailResult.error || paymentResult.error || movementResult.error) throw new Error(message(detailResult.error || paymentResult.error || movementResult.error, 'No se pudo cargar el resumen de caja.'));
-    const details = new Map<string, { productId: string; name: string; quantity: number; subtotal: number }[]>();
-    for (const item of detailResult.data || []) details.set(String(item.pedido_id), [...(details.get(String(item.pedido_id)) || []), { productId: String(item.producto_id), name: String(item.nombre_producto), quantity: Number(item.cantidad), subtotal: Number(item.subtotal) }]);
+    const details = new Map<string, { productId: string; name: string; quantity: number; subtotal: number; customizations: ChickenCustomization[] }[]>();
+    for (const item of detailResult.data || []) details.set(String(item.pedido_id), [...(details.get(String(item.pedido_id)) || []), { productId: String(item.producto_id), name: String(item.nombre_producto), quantity: Number(item.cantidad), subtotal: Number(item.subtotal), customizations: Array.isArray(item.personalizacion) ? item.personalizacion as ChickenCustomization[] : [] }]);
     const payments = new Map<string, { method: string; amount: number }[]>();
     for (const payment of paymentResult.data || []) payments.set(String(payment.pedido_id), [...(payments.get(String(payment.pedido_id)) || []), { method: String(payment.metodo), amount: Number(payment.monto) }]);
     const orders = orderRows || [];
@@ -72,7 +78,7 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
       const orderPayments = payments.get(String(o.id)) || [];
       const uniqueMethods = [...new Set(orderPayments.map(p => p.method))];
       const lines = details.get(String(o.id)) || [];
-      return { id: String(o.id), ticket: `R-${String(o.numero).padStart(4, '0')}`, customer: String(o.cliente), total: Number(o.total), payment: uniqueMethods.length > 1 ? 'Mixto' : uniqueMethods[0] || '—', payments: orderPayments, status: String(o.estado), date: String(o.created_at), items: lines.map(line => `${line.quantity} × ${line.name}`).join(' · '), lines };
+      return { id: String(o.id), ticket: `R-${String(o.numero).padStart(4, '0')}`, customer: String(o.cliente), total: Number(o.total), payment: uniqueMethods.length > 1 ? 'Mixto' : uniqueMethods[0] || '—', payments: orderPayments, status: String(o.estado), date: String(o.created_at), items: lines.map(line => `${line.quantity} × ${line.name}${line.customizations.length ? ` (${line.customizations.map(customizationLabel).join('; ')})` : ''}`).join(' · '), lines };
     });
     return { data: {
       profileName: [profile.nombre, profile.apellido].filter(Boolean).join(' ').trim() || user.email || 'Cajero',
@@ -101,13 +107,13 @@ export async function openCashierShift(input: { opening: number; notes: string }
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo abrir la caja.' }; }
 }
 
-export async function registerCashierSale(input: { shiftId: string; customer: string; items: { productId: string; quantity: number }[]; payments: { method: string; amount: number }[] }) {
+export async function registerCashierSale(input: { shiftId: string; customer: string; items: { productId: string; quantity: number; customizations?: ChickenCustomization[] }[]; payments: { method: string; amount: number }[] }) {
   try {
     const { db, profile } = await requireCashier();
     if (!/^[0-9a-f-]{36}$/i.test(input.shiftId) || !Array.isArray(input.items) || !input.items.length || input.items.length > 100) return { ok: false as const, error: 'Revisa el pedido antes de registrarlo.' };
     const payments = input.payments.map(payment => ({ metodo: payment.method, monto: Number(payment.amount.toFixed(2)) }));
     if (!payments.length || payments.length > 3 || payments.some(payment => !['Efectivo', 'QR', 'Tarjeta'].includes(payment.metodo) || !Number.isFinite(payment.monto) || payment.monto <= 0) || new Set(payments.map(payment => payment.metodo)).size !== payments.length) return { ok: false as const, error: 'Revisa los métodos y montos del pago.' };
-    const items = input.items.map(item => ({ producto_id: item.productId, cantidad: Number(item.quantity) }));
+    const items = input.items.map(item => ({ producto_id: item.productId, cantidad: Number(item.quantity), personalizacion: item.customizations || [] }));
     if (items.some(item => !/^[0-9a-f-]{36}$/i.test(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 100000)) return { ok: false as const, error: 'Hay una cantidad de producto inválida.' };
     const { data: prices, error: priceError } = await db.from('productos').select('id,precio,precio_oferta,en_oferta, categoria:categorias!inner(activa)').in('id', items.map(i => i.producto_id)).eq('activo', true).eq('categoria.activa', true);
     if (priceError || !prices || prices.length !== items.length) return { ok: false as const, error: message(priceError, 'No se pudo validar el total del pedido.') };
@@ -124,13 +130,13 @@ export async function registerCashierSale(input: { shiftId: string; customer: st
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo registrar la venta.' }; }
 }
 
-export async function updateCashierOrder(input: { orderId: string; customer: string; items: { productId: string; quantity: number }[]; payments: { method: string; amount: number }[] }) {
+export async function updateCashierOrder(input: { orderId: string; customer: string; items: { productId: string; quantity: number; customizations?: ChickenCustomization[] }[]; payments: { method: string; amount: number }[] }) {
   try {
     const { db } = await requireCashier();
     if (!/^[0-9a-f-]{36}$/i.test(input.orderId) || !Array.isArray(input.items) || !input.items.length || input.items.length > 100) return { ok: false as const, error: 'Revisa el pedido antes de guardarlo.' };
     const payments = input.payments.map(payment => ({ metodo: payment.method, monto: Number(payment.amount.toFixed(2)) }));
     if (!payments.length || payments.length > 3 || payments.some(payment => !['Efectivo', 'QR', 'Tarjeta'].includes(payment.metodo) || !Number.isFinite(payment.monto) || payment.monto <= 0) || new Set(payments.map(payment => payment.metodo)).size !== payments.length) return { ok: false as const, error: 'Revisa los métodos y montos del pago.' };
-    const items = input.items.map(item => ({ producto_id: item.productId, cantidad: Number(item.quantity) }));
+    const items = input.items.map(item => ({ producto_id: item.productId, cantidad: Number(item.quantity), personalizacion: item.customizations || [] }));
     if (items.some(item => !/^[0-9a-f-]{36}$/i.test(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 100000)) return { ok: false as const, error: 'Hay una cantidad de producto inválida.' };
     const { error } = await db.rpc('actualizar_pedido_cajero_mixto', { p_pedido: input.orderId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_pagos: payments });
     if (error) return { ok: false as const, error: message(error, 'No se pudo actualizar el pedido.') };
