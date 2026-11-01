@@ -169,31 +169,19 @@ export default function CashierApp() {
   function openPaymentDialog() {
     const mode = (editingOrder?.payment === 'Mixto' ? 'Mixto' : method) as PaymentMethod;
     setMethod(mode);
-    if (mode === 'Mixto' && editingOrder) {
-      const values: MixedPayment = { Efectivo: '', QR: '' };
-      for (const item of editingOrder.payments) if (item.method in values) values[item.method as keyof MixedPayment] = item.amount.toFixed(2);
-      setMixedPayment(values);
-      setCashGiven((amountValue(values.Efectivo) || total).toFixed(2));
-      setActivePaymentField('Efectivo');
-    } else {
-      setMixedPayment({ Efectivo: total.toFixed(2), QR: '' });
-      setCashGiven(total.toFixed(2));
-      setDigitalReceived(total.toFixed(2));
-      setActivePaymentField(mode === 'Efectivo' ? 'cashGiven' : mode === 'Mixto' ? 'Efectivo' : 'digitalReceived');
-    }
+    setMixedPayment({ Efectivo: '', QR: '' });
+    setCashGiven('');
+    setDigitalReceived('');
+    setActivePaymentField(mode === 'Mixto' ? 'Efectivo' : mode === 'Efectivo' ? 'cashGiven' : 'digitalReceived');
     setPaymentOpen(true);
   }
 
   function setPaymentMode(value: PaymentMethod) {
     setMethod(value);
-    if (value === 'Mixto') {
-      if (!Object.values(mixedPayment).some(amount => amountValue(amount) > 0)) setMixedPayment({ Efectivo: total.toFixed(2), QR: '' });
-      setActivePaymentField('Efectivo');
-    } else {
-      setCashGiven(total.toFixed(2));
-      setDigitalReceived(total.toFixed(2));
-      setActivePaymentField(value === 'Efectivo' ? 'cashGiven' : 'digitalReceived');
-    }
+    setMixedPayment({ Efectivo: '', QR: '' });
+    setCashGiven('');
+    setDigitalReceived('');
+    setActivePaymentField(value === 'Mixto' ? 'Efectivo' : value === 'Efectivo' ? 'cashGiven' : 'digitalReceived');
   }
 
   function writePaymentField(value: string) {
