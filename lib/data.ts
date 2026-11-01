@@ -7,6 +7,7 @@ export type Order = { id: string; ticket?: string; shift?: string; payments?: { 
 export type Supplier = { id: string; name: string; contact: string; phone: string; nit: string; active: boolean };
 export type Purchase = { id: string; supplier: string; branch: string; stock: string; quantity: number; unitCost: number; date: string; notes: string; status: 'Registrada' | 'Anulada'; document?: string; receipt?: string };
 export type SnackStock = { id: string; product: string; branch: string; quantity: number; minimum: number };
+export type BeverageStock = { id: string; product: string; branch: string; freezer: number; warehouse: number; minimum: number };
 export type Notice = { id: string; title: string; body: string; branch: string; priority: string; active: boolean; date: string };
 export type SystemUser = { id: string; name: string; email: string; branch: string; role: string; active: boolean };
 export type StaffPayment = { id: string; employee: string; employeeName: string; branch: string; amount: number; concept: string; observations: string; paymentType: string; period: string; date: string; method: string; status: string };
@@ -14,8 +15,8 @@ export type Finance = { id: string; type: string; amount: number; category: stri
 export type Shift = { id: string; branch: string; cashier: string; opening: number; openedAt: string; closedAt: string | null; counted: number | null; expected?: number | null; notes: string };
 export type CashMovement = { id: string; shift: string; type: string; amount: number; concept: string; date: string };
 export type Profile = { name: string; surname: string; email: string; phone: string };
-export type Data = { currentUserId?: string; categories?: string[]; categoryRecords?: Category[]; products: Product[]; stock: Stock[]; employees: Employee[]; branches: Branch[]; orders: Order[]; settings: { name: string; phone: string; address: string; message: string }; suppliers: Supplier[]; purchases: Purchase[]; snackStocks: SnackStock[]; notices: Notice[]; users: SystemUser[]; staffPayments: StaffPayment[]; finances: Finance[]; shifts: Shift[]; cashMovements: CashMovement[]; profile: Profile };
-export const extraDefaults = () => ({ suppliers: [] as Supplier[], purchases: [] as Purchase[], snackStocks: [] as SnackStock[], notices: [] as Notice[], users: [] as SystemUser[], staffPayments: [] as StaffPayment[], finances: [] as Finance[], shifts: [] as Shift[], cashMovements: [] as CashMovement[], profile: { name: 'Administrador', surname: '', email: '', phone: '' } });
+export type Data = { currentUserId?: string; categories?: string[]; categoryRecords?: Category[]; products: Product[]; stock: Stock[]; employees: Employee[]; branches: Branch[]; orders: Order[]; settings: { name: string; phone: string; address: string; message: string }; suppliers: Supplier[]; purchases: Purchase[]; snackStocks: SnackStock[]; beverageStocks: BeverageStock[]; notices: Notice[]; users: SystemUser[]; staffPayments: StaffPayment[]; finances: Finance[]; shifts: Shift[]; cashMovements: CashMovement[]; profile: Profile };
+export const extraDefaults = () => ({ suppliers: [] as Supplier[], purchases: [] as Purchase[], snackStocks: [] as SnackStock[], beverageStocks: [] as BeverageStock[], notices: [] as Notice[], users: [] as SystemUser[], staffPayments: [] as StaffPayment[], finances: [] as Finance[], shifts: [] as Shift[], cashMovements: [] as CashMovement[], profile: { name: 'Administrador', surname: '', email: '', phone: '' } });
 export function hydrateData(raw: string | null): Data {
   if (!raw) return initialData();
   const parsed = JSON.parse(raw);

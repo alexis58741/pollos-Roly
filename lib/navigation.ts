@@ -1,4 +1,4 @@
-import { LayoutDashboard, ShoppingBag, Wallet, Bell, UtensilsCrossed, Cookie, Package, Truck, ShoppingBasket, BarChart3, UserCog, HandCoins, TrendingUp, Store, UserRound, Settings, Clock3 } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Wallet, Bell, UtensilsCrossed, Cookie, CupSoda, Package, Truck, ShoppingBasket, BarChart3, UserCog, HandCoins, TrendingUp, Store, UserRound, Settings, Clock3 } from 'lucide-react';
 export const navigation = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard', child: false },
   { id: 'ventas', label: 'Ventas', icon: ShoppingBag, href: '/admin/ventas', child: false },
@@ -6,6 +6,7 @@ export const navigation = [
   { id: 'comunicados', label: 'Avisos', icon: Bell, href: '/admin/comunicados', child: false },
   { id: 'menu', label: 'Menú', icon: UtensilsCrossed, href: '/admin/menu', child: false },
   { id: 'snacks', label: 'Snacks', icon: Cookie, href: '/admin/snacks', child: false },
+  { id: 'bebidas', label: 'Bebidas', icon: CupSoda, href: '/admin/bebidas', child: false },
   { id: 'inventario', label: 'Insumos', icon: Package, href: '/admin/inventario/insumos', child: true },
   { id: 'proveedores', label: 'Proveedores', icon: Truck, href: '/admin/inventario/proveedores', child: true },
   { id: 'compras', label: 'Compras', icon: ShoppingBasket, href: '/admin/inventario/compras', child: true },
@@ -18,4 +19,4 @@ export const navigation = [
   { id: 'perfil', label: 'Mi Perfil', icon: UserRound, href: '/admin/perfil', child: false },
   { id: 'configuracion', label: 'Configuración', icon: Settings, href: '/admin/configuracion', child: false },
 ];
-export const advancedSections = ['caja', 'comunicados', 'snacks', 'proveedores', 'compras', 'reportes', 'empleados', 'asistencia', 'pagos-personal', 'finanzas-personales', 'perfil'];
+export const advancedSections = ['caja', 'comunicados', 'snacks', 'bebidas', 'proveedores', 'compras', 'reportes', 'empleados', 'asistencia', 'pagos-personal', 'finanzas-personales', 'perfil'];

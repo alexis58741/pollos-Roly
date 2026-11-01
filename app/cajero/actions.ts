@@ -5,7 +5,7 @@ import { requireCashier } from '../../lib/supabase/server';
 import { localDate } from '../../lib/data';
 
 export type ChickenCustomization = { piece: 'Pechuga' | 'Ala' | 'Pierna' | 'Contra'; preparation: 'Brasa' | 'Broaster'; accompaniments: ('Arroz' | 'Fideo' | 'Papa')[] };
-export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; snack: boolean; stock: number | null; requiresChoices: boolean; pieceType: 'leg_thigh' | 'breast_wing' | 'all' };
+export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; tracksStock: boolean; stock: number | null; requiresChoices: boolean; pieceType: 'leg_thigh' | 'breast_wing' | 'all' };
 export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; payments: { method: string; amount: number }[]; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number; customizations: ChickenCustomization[] }[] };
 export type CashierSnapshot = {
   profileName: string; branchId: string; branchName: string; businessName: string;
@@ -21,6 +21,7 @@ function message(error: { message?: string; code?: string } | null, fallback: st
   if (error?.code === '42501') return 'No tienes permiso para esta operación. Confirma que ejecutaste database/11_cajero.sql en Supabase.';
   if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan funciones de caja o pedidos. Ejecuta database/11_cajero.sql, database/12_cajero_pedidos.sql, database/13_cajero_pagos_mixtos.sql y database/14_personalizacion_pollo.sql en Supabase.';
   if (error?.code === 'PGRST204' || error?.code === '42703') return 'Falta la columna de personalización del pedido. Ejecuta database/14_personalizacion_pollo.sql en Supabase.';
+  if (error?.code === 'PGRST205' || error?.code === '42P01') return 'Falta el inventario de bebidas. Ejecuta database/15_inventario_bebidas.sql en Supabase.';
   return error?.message || fallback;
 }
 
@@ -39,14 +40,22 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
     if (!branchResult.data) throw new Error('No se pudo consultar tu sucursal. Ejecuta database/11_cajero.sql en Supabase y confirma que tu usuario tenga asignada esa sucursal.');
     if (!branchResult.data.activa) throw new Error('La sucursal asignada está inactiva. Pide al administrador que la active.');
     const categories = new Map((categoryResult.data || []).map(c => [String(c.id), String(c.nombre)]));
-    const { data: snackRows, error: snackError } = await db.from('stock_snacks').select('producto_id,cantidad').eq('sucursal_id', profile.sucursal_id);
+    const [{ data: snackRows, error: snackError }, { data: beverageRows, error: beverageError }] = await Promise.all([
+      db.from('stock_snacks').select('producto_id,cantidad').eq('sucursal_id', profile.sucursal_id),
+      db.from('stock_bebidas').select('producto_id,cantidad_freezer,cantidad_almacen').eq('sucursal_id', profile.sucursal_id),
+    ]);
     if (snackError) throw new Error(message(snackError, 'No se pudo consultar el stock de snacks.'));
+    if (beverageError) throw new Error(message(beverageError, 'No se pudo consultar el stock de bebidas.'));
     const snacks = new Map((snackRows || []).map(s => [String(s.producto_id), Number(s.cantidad)]));
+    const beverages = new Map((beverageRows || []).map(s => [String(s.producto_id), Number(s.cantidad_freezer) + Number(s.cantidad_almacen)]));
     const products: CashierProduct[] = (productResult.data || []).flatMap(p => {
       const category = categories.get(String(p.categoria_id));
       if (!category) return [];
       const snack = category.trim().toLowerCase() === 'snacks';
-      return [{ id: String(p.id), name: String(p.nombre), category, price: Number(p.precio), salePrice: p.precio_oferta == null ? null : Number(p.precio_oferta), onSale: p.en_oferta === true, photoPath: String(p.foto_path || ''), sortOrder: Number(p.orden || 1), snack, stock: snack ? snacks.get(String(p.id)) ?? 0 : null, requiresChoices: p.requiere_seleccion === true, pieceType: (p.tipo_presas || 'all') as CashierProduct['pieceType'] }];
+      const beverage = category.trim().toLowerCase() === 'bebidas';
+      const tracksStock = snack || beverage;
+      const stock = snack ? snacks.get(String(p.id)) ?? 0 : beverage ? beverages.get(String(p.id)) ?? 0 : null;
+      return [{ id: String(p.id), name: String(p.nombre), category, price: Number(p.precio), salePrice: p.precio_oferta == null ? null : Number(p.precio_oferta), onSale: p.en_oferta === true, photoPath: String(p.foto_path || ''), sortOrder: Number(p.orden || 1), tracksStock, stock, requiresChoices: p.requiere_seleccion === true, pieceType: (p.tipo_presas || 'all') as CashierProduct['pieceType'] }];
     });
 
     const dayStart = `${localDate()}T00:00:00-04:00`;

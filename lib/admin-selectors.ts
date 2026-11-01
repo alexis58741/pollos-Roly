@@ -12,6 +12,7 @@ export function inventoryAlerts(data: Data, branch = 'all') {
   return [
     ...data.stock.filter(i => inScope(i.branch) && i.quantity <= i.minimum),
     ...data.snackStocks.filter(s => inScope(s.branch) && s.quantity <= s.minimum && data.products.some(p => p.id === s.product && p.active)).map(s => ({ ...s, name: data.products.find(p => p.id === s.product)?.name || 'Snack', unit: 'unidades' })),
+    ...data.beverageStocks.filter(s => inScope(s.branch) && s.freezer + s.warehouse <= s.minimum && data.products.some(p => p.id === s.product && p.active)).map(s => ({ id: s.id, branch: s.branch, quantity: s.freezer + s.warehouse, minimum: s.minimum, name: data.products.find(p => p.id === s.product)?.name || 'Bebida', unit: 'unidades' })),
   ];
 }
 export function matchingBranches(data: Data, branch: string, query: string) {

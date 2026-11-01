@@ -7,7 +7,7 @@ import { MAX_PHOTO_SIZE, photoExtension, productDetails } from '../../lib/produc
 import { validatePurchaseDraft } from '../../lib/purchases';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 
-const tables = ['sucursales','perfiles','personal_operativo','categorias','productos','insumos','proveedores','compras','stock_snacks','comunicados','pagos_personal','movimientos_financieros','turnos_caja','movimientos_caja','pedidos','detalle_pedido','pagos_pedido','configuracion'];
+const tables = ['sucursales','perfiles','personal_operativo','categorias','productos','insumos','proveedores','compras','stock_snacks','stock_bebidas','comunicados','pagos_personal','movimientos_financieros','turnos_caja','movimientos_caja','pedidos','detalle_pedido','pagos_pedido','configuracion'];
 type Client = Awaited<ReturnType<typeof requireAdmin>>['db'];
 async function readData(db: Client, userId: string) {
   const entries = await Promise.all(tables.map(async table => {
@@ -25,7 +25,7 @@ async function readData(db: Client, userId: string) {
 function friendly(error: { message?: string; code?: string }) {
   if (error.code === '23505') return 'Ya existe un registro con esos datos. Actualiza la pantalla antes de volver a guardar.';
   if (error.code === '42501') return 'No tienes permiso para esta operación. Comprueba tu perfil de administrador.';
-  if (error.code === '42P01' || error.code === 'PGRST205') return 'Falta instalar el esquema de Pollos Roly en este proyecto.';
+  if (error.code === '42P01' || error.code === 'PGRST205') return 'Falta instalar el inventario de bebidas. Ejecuta database/15_inventario_bebidas.sql en Supabase y actualiza los datos.';
   if (error.code === '23503') return 'El registro relacionado ya no existe. Actualiza la pantalla.';
   if (error.code === '42703' || error.code === 'PGRST204') return 'Falta actualizar los productos. Ejecuta database/03_productos_pollos.sql en el SQL Editor de Supabase y actualiza los datos.';
   return error.message || 'No se pudo conectar con la base de datos.';
@@ -142,10 +142,11 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
             if (linked.error) throw new Error(friendly(linked.error));
             if (linked.data.length) throw new Error('Esta categoría tiene productos. Cámbialos de categoría antes de archivarla.');
           }
-          if (existing.data.nombre.trim().toLowerCase() === 'snacks' && name.toLowerCase() !== 'snacks') {
-            const stock = await db.from('stock_snacks').select('id,productos!inner(categoria_id)').eq('productos.categoria_id', id).limit(1);
+          if (['snacks', 'bebidas'].includes(existing.data.nombre.trim().toLowerCase()) && name.trim().toLowerCase() !== existing.data.nombre.trim().toLowerCase()) {
+            const table = existing.data.nombre.trim().toLowerCase() === 'snacks' ? 'stock_snacks' : 'stock_bebidas';
+            const stock = await db.from(table).select('id,productos!inner(categoria_id)').eq('productos.categoria_id', id).limit(1);
             if (stock.error) throw new Error(friendly(stock.error));
-            if (stock.data.length) throw new Error('Snacks controla existencias. Conserva ese nombre mientras tenga inventario asociado.');
+            if (stock.data.length) throw new Error('Esta categoría controla existencias. Conserva su nombre mientras tenga inventario asociado.');
           }
         }
         await write('categorias', { nombre: name, activa: active }); break;
@@ -157,7 +158,7 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
         const productName = str('name'); const active = bool('active');
         if (productName.length > 100) throw new Error('El nombre del producto admite hasta 100 caracteres.');
         // Comprobar la migración antes de crear categorías o subir fotografías.
-        const existing = await db.from('productos').select('id,foto_path').eq('id', id).maybeSingle();
+        const existing = await db.from('productos').select('id,foto_path,categoria_id').eq('id', id).maybeSingle();
         if (existing.error) throw new Error(friendly(existing.error));
         if (!op.create && !existing.data) throw new Error('El producto ya no existe. Actualiza los datos.');
         const oldPhoto = existing.data?.foto_path || '';
@@ -184,6 +185,11 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
           } else category = inserted.data;
         }
         if (!category.activa) throw new Error('La categoría está archivada. Reactívala antes de usarla.');
+        if (!op.create && existing.data?.categoria_id !== category.id) {
+          const beverageStock = await db.from('stock_bebidas').select('id').eq('producto_id', id).limit(1);
+          if (beverageStock.error) throw new Error(friendly(beverageStock.error));
+          if (beverageStock.data.length && category.nombre.trim().toLowerCase() !== 'bebidas') throw new Error('Este producto tiene inventario de bebidas. No lo cambies de categoría mientras tenga stock asociado.');
+        }
         if (bytes) {
           photoPath = `${id}/${crypto.randomUUID()}.${extension}`;
           const { error: uploadError } = await db.storage.from('productos').upload(photoPath, bytes, { contentType: (photo as File).type, upsert: false });
@@ -199,6 +205,17 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
       case 'employees': await write('personal_operativo', { nombre: str('name'), rol: choice('role', ['Administrador','Supervisor','Cajero','Cocinero','Mesero','Repartidor','Limpieza']), sucursal_id: uuid('branch'), telefono: str('phone', true), activo: bool('active') }); break;
       case 'suppliers': await write('proveedores', { nombre: str('name'), contacto: str('contact', true), telefono: str('phone', true), nit: str('nit', true), activo: bool('active') }); break;
       case 'snackStocks': await write('stock_snacks', { producto_id: uuid('product'), sucursal_id: uuid('branch'), cantidad: num('quantity', true, true), minimo: num('minimum', true, true) }); break;
+      case 'beverageStocks': {
+        const productId = uuid('product'); const branchId = uuid('branch');
+        const freezer = num('freezer', true, true); const warehouse = num('warehouse', true, true); const minimum = num('minimum', true, true);
+        const { data: product, error: productError } = await db.from('productos').select('id,categorias!inner(nombre)').eq('id', productId).maybeSingle();
+        if (productError || !product || String((product.categorias as { nombre?: string } | null)?.nombre || '').trim().toLowerCase() !== 'bebidas') throw new Error('Selecciona un producto de la categoría Bebidas.');
+        const { data: branchRow, error: branchError } = await db.from('sucursales').select('id').eq('id', branchId).eq('activa', true).maybeSingle();
+        if (branchError || !branchRow) throw new Error('Selecciona una sucursal activa.');
+        const { error } = await db.from('stock_bebidas').upsert({ producto_id: productId, sucursal_id: branchId, cantidad_freezer: freezer, cantidad_almacen: warehouse, minimo: minimum }, { onConflict: 'producto_id,sucursal_id' });
+        if (error) throw new Error(friendly(error));
+        break;
+      }
       case 'notices': await write('comunicados', { titulo: str('title'), mensaje: str('body'), sucursal_id: r.branch === 'all' ? null : uuid('branch'), prioridad: choice('priority', ['Normal','Importante','Urgente']), publicado: bool('active'), fecha: date('date') }); break;
       case 'users': {
         if (op.create) throw new Error('Crea la cuenta en Supabase → Authentication → Users. Después actualiza esta pantalla para asignarle sucursal y permisos.');

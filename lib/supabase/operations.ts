@@ -3,7 +3,7 @@ export type Mutation = { collection: string; create: boolean; record: Record<str
 // Traducir una edición de pantalla a una sola operación de negocio.
 // Compras tiene prioridad: el servidor actualiza sus existencias en la misma transacción.
 export function planMutation(before: Data, after: Data): Mutation {
-  const keys = ['purchases', 'shifts', 'cashMovements', 'orders', 'products', 'stock', 'employees', 'branches', 'suppliers', 'snackStocks', 'notices', 'users', 'staffPayments', 'finances'] as const;
+  const keys = ['purchases', 'shifts', 'cashMovements', 'orders', 'products', 'stock', 'employees', 'branches', 'suppliers', 'snackStocks', 'beverageStocks', 'notices', 'users', 'staffPayments', 'finances'] as const;
   for (const collection of keys) {
     const previous = before[collection];
     const changed = after[collection].filter(row => JSON.stringify(row) !== JSON.stringify(previous.find(p => p.id === row.id)));

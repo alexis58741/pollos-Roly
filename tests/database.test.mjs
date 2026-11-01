@@ -175,5 +175,26 @@ try {
   await assert.rejects(db.query('select * from public.sucursales'), /permission denied/);
   await assert.rejects(db.query(`select public.abrir_turno('${branch}',1)`), /permission denied/);
   console.log('OK · pagos realizados protegidos; sin escrituras directas financieras ni acceso anónimo');
+  await db.exec('reset role;');
+  for (const filename of ['11_cajero.sql','12_cajero_pedidos.sql','13_cajero_pagos_mixtos.sql','14_personalizacion_pollo.sql']) {
+    const migration = await readFile(new URL(`../database/${filename}`, import.meta.url), 'utf8');
+    await db.exec(migration);
+  }
+  const beverageMigration = await readFile(new URL('../database/15_inventario_bebidas.sql', import.meta.url), 'utf8');
+  await db.exec(beverageMigration);
+  await db.exec(beverageMigration);
+  await db.exec(`set request.jwt.claim.sub='${admin}';`);
+  const beverage = await scalar(`insert into public.productos(nombre,categoria_id,precio) select 'Soda prueba',id,5 from public.categorias where nombre='Bebidas' returning id`);
+  await db.exec(`insert into public.stock_bebidas(producto_id,sucursal_id,cantidad_freezer,cantidad_almacen,minimo) values('${beverage}','${branch}',2,3,1);`);
+  const beverageShift = await scalar(`select public.abrir_turno('${branch}',0)`);
+  const beverageOrder = await scalar(`select public.registrar_pedido('${beverageShift}','Prueba bebidas','[{"producto_id":"${beverage}","cantidad":3}]','[{"metodo":"Efectivo","monto":15}]')`);
+  assert.equal(Number(await scalar(`select cantidad_freezer from public.stock_bebidas where producto_id='${beverage}'`)), 0);
+  assert.equal(Number(await scalar(`select cantidad_almacen from public.stock_bebidas where producto_id='${beverage}'`)), 2);
+  await assert.rejects(db.query(`select public.registrar_pedido('${beverageShift}','Sin stock','[{"producto_id":"${beverage}","cantidad":3}]','[{"metodo":"Efectivo","monto":15}]')`), /Stock insuficiente/);
+  await db.exec(`select public.cambiar_estado_pedido('${beverageOrder}','Cancelado');`);
+  assert.equal(Number(await scalar(`select cantidad_freezer from public.stock_bebidas where producto_id='${beverage}'`)), 2);
+  assert.equal(Number(await scalar(`select cantidad_almacen from public.stock_bebidas where producto_id='${beverage}'`)), 3);
+  assert.equal(Number(await scalar(`select count(*) from public.alertas_stock where tipo='Bebida' and referencia_id=(select id from public.stock_bebidas where producto_id='${beverage}')`)), 0);
+  console.log('OK · bebidas: migración repetible, descuento freezer/almacén, límite de stock, anulación y alertas');
   console.log('Todas las pruebas SQL pasaron (PostgreSQL embebido con auth simulado).');
 } finally { await db.close(); }
