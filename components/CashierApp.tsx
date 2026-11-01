@@ -31,7 +31,6 @@ export default function CashierApp() {
   const [customer, setCustomer] = useState('');
   const [method, setMethod] = useState('Efectivo');
   const [opening, setOpening] = useState('');
-  const [openingNotes, setOpeningNotes] = useState('');
   const [counted, setCounted] = useState('');
   const [historyFilter, setHistoryFilter] = useState('Todos');
   const [historyQuery, setHistoryQuery] = useState('');
@@ -238,14 +237,14 @@ export default function CashierApp() {
   if (!shift) return <main className="cashier-page is-opening">
     {header}
     <section className="cashier-open-stage">
-      <form className="cashier-open-card" onSubmit={event => { event.preventDefault(); void submit(() => openCashierShift({ opening: Number(opening), notes: openingNotes }), 'Caja abierta. Ya puedes empezar a registrar ventas.').then(ok => { if (ok) { setPanel('venta'); setOpening(''); setOpeningNotes(''); } }); }}>
+      <div className="cashier-open-backdrop-art" aria-hidden="true"><Image src="/images/chicken-header.png" alt="" fill sizes="(max-width: 760px) 0px, 520px" priority /></div>
+      <form className="cashier-open-card" onSubmit={event => { event.preventDefault(); void submit(() => openCashierShift({ opening: Number(opening), notes: '' }), 'Caja abierta. Ya puedes empezar a registrar ventas.').then(ok => { if (ok) { setPanel('venta'); setOpening(''); } }); }}>
         <span className="cashier-open-icon"><Wallet size={38} /></span>
         <p className="eyebrow">INICIO DE TURNO · {data.branchName}</p>
         <h1>Apertura de Caja</h1>
         <p className="cashier-open-description">Declara el monto inicial de tu caja (sencillo) para empezar a vender.</p>
         {error && <div className="cashier-alert is-error" role="alert">{error}<button type="button" onClick={() => setError('')} aria-label="Cerrar aviso"><X size={16}/></button></div>}
         <label className="cashier-opening-amount">MONTO INICIAL (BS.)<span><b>Bs.</b><input type="number" min="0" max="10000000" step="0.01" required value={opening} onChange={event => setOpening(event.target.value)} placeholder="0.00" disabled={busy} /></span></label>
-        <label className="cashier-opening-notes">Observaciones (opcional)<textarea rows={2} maxLength={1000} value={openingNotes} onChange={event => setOpeningNotes(event.target.value)} placeholder="Notas de apertura…" disabled={busy}/></label>
         <div className="cashier-open-note"><CircleDollarSign size={17}/><span>Este monto se sumará a las ventas en efectivo para el arqueo final.</span></div>
         <button className="button primary cashier-open-submit" disabled={busy}><Wallet size={18}/>{busy ? 'Abriendo caja…' : 'Abrir caja y empezar a vender'}<span aria-hidden="true">›</span></button>
         {message && <p className="cashier-open-success" role="status">{message}</p>}
@@ -270,7 +269,7 @@ export default function CashierApp() {
         </aside>
       </div>
     </>}
-    {panel === 'caja' && <><div className="cashier-cash-heading"><div><p className="eyebrow">TURNO · {data.branchName}</p><h1>Caja</h1></div><button className="button" onClick={() => setPanel('venta')}><ShoppingBag size={16}/>Volver a ventas</button></div><div className="cashier-cash-grid">{!shift ? <section className="cashier-cash-card"><div className="cashier-cash-icon"><Wallet size={22} /></div><h2>Abrir turno de caja</h2><p>Cuenta el efectivo con el que inicias. Solo puede haber un turno abierto en esta sucursal.</p><form onSubmit={event => { event.preventDefault(); void submit(() => openCashierShift({ opening: Number(opening), notes: openingNotes }), 'Turno de caja abierto.'); }}><label>Fondo inicial (Bs)<input type="number" min="0" step="0.01" required value={opening} onChange={e => setOpening(e.target.value)} placeholder="0.00" /></label><label>Observaciones (opcional)<textarea maxLength={1000} rows={3} value={openingNotes} onChange={e => setOpeningNotes(e.target.value)} placeholder="Notas de apertura…" /></label><button className="button primary" disabled={busy}><Check size={16} />Abrir caja</button></form></section> : <>
+    {panel === 'caja' && <><div className="cashier-cash-heading"><div><p className="eyebrow">TURNO · {data.branchName}</p><h1>Caja</h1></div><button className="button" onClick={() => setPanel('venta')}><ShoppingBag size={16}/>Volver a ventas</button></div><div className="cashier-cash-grid">{!shift ? <section className="cashier-cash-card"><div className="cashier-cash-icon"><Wallet size={22} /></div><h2>Abrir turno de caja</h2><p>Cuenta el efectivo con el que inicias. Solo puede haber un turno abierto en esta sucursal.</p><form onSubmit={event => { event.preventDefault(); void submit(() => openCashierShift({ opening: Number(opening), notes: '' }), 'Turno de caja abierto.'); }}><label>Fondo inicial (Bs)<input type="number" min="0" step="0.01" required value={opening} onChange={e => setOpening(e.target.value)} placeholder="0.00" /></label><button className="button primary" disabled={busy}><Check size={16} />Abrir caja</button></form></section> : <>
       <section className="cashier-cash-card"><div className="cashier-cash-card-heading"><div><div className="cashier-cash-icon"><Wallet size={22} /></div><h2>Turno abierto</h2><p>{data.branchName} · {new Date(shift.openedAt).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}</p></div><span className="cashier-shift-pill is-open"><i />Activo</span></div><div className="cashier-cash-numbers"><div><small>Fondo inicial</small><strong>{money(shift.opening)}</strong></div><div><small>Efectivo esperado</small><strong>{money(data.expectedCash)}</strong></div></div></section>
       <section className="cashier-cash-card cashier-close-card"><div className="cashier-cash-icon"><Check size={22} /></div><h2>Cerrar turno</h2><p>El efectivo esperado se calcula automáticamente con el fondo inicial y las ventas en efectivo. Cuenta el dinero disponible e ingresa el monto exacto.</p><form onSubmit={event => { event.preventDefault(); void submit(() => closeCashierShift({ shiftId: shift.id, counted: Number(counted), notes: '' }), 'Turno cerrado y arqueo guardado.'); }}><label>Efectivo contado (Bs)<input type="number" min="0" step="0.01" required value={counted} onChange={e => setCounted(e.target.value)} placeholder={data.expectedCash.toFixed(2)} /></label><div className="cashier-expected"><span>Diferencia estimada</span><strong>{money(Number(counted || 0) - data.expectedCash)}</strong></div><button className="button primary" disabled={busy}><Check size={16} />Cerrar y guardar arqueo</button></form></section>
     </>}</div></>}
