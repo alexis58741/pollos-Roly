@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { requireCashier } from '../../lib/supabase/server';
 import { localDate } from '../../lib/data';
 
-export type ChickenCustomization = { piece: 'Pechuga' | 'Ala' | 'Pierna' | 'Contra'; preparation: 'Brasa' | 'Broaster' | 'Espiedo'; accompaniments: ('Arroz' | 'Fideo' | 'Papa')[] };
+export type ChickenCustomization = { piece: 'Pechuga' | 'Ala' | 'Pierna' | 'Contra'; preparation: 'Brasa' | 'Broaster'; accompaniments: ('Arroz' | 'Fideo' | 'Papa')[] };
 export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; snack: boolean; stock: number | null; requiresChoices: boolean; pieceType: 'leg_thigh' | 'breast_wing' | 'all' };
 export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; payments: { method: string; amount: number }[]; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number; customizations: ChickenCustomization[] }[] };
 export type CashierSnapshot = {

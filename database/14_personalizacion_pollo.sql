@@ -62,7 +62,7 @@ begin
        (v_producto.tipo_presas='leg_thigh' and v_presa not in ('Pierna','Contra')) then
       raise exception 'La presa elegida no está disponible para este producto.';
     end if;
-    if v_preparacion is null or v_preparacion not in ('Brasa','Broaster','Espiedo') then raise exception 'Selecciona Brasa, Broaster o Espiedo.'; end if;
+    if v_preparacion is null or v_preparacion not in ('Brasa','Broaster') then raise exception 'Selecciona Brasa o Broaster.'; end if;
     if v_acompanamientos is null or jsonb_typeof(v_acompanamientos)<>'array' then raise exception 'Selecciona los acompañamientos de la porción.'; end if;
     if exists(select 1 from jsonb_array_elements_text(v_acompanamientos) a(value) where value not in ('Arroz','Fideo','Papa')) then
       raise exception 'Hay un acompañamiento no válido.';
