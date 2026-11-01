@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { ArrowDownUp, Ban, Bell, ChefHat, Check, CircleDollarSign, Clock3, ConciergeBell, Drumstick, Grid2X2, History, LogOut, Minus, Package, Pencil, Plus, Popcorn, Printer, RefreshCw, Search, ShoppingBag, Store, CupSoda, Wallet, X } from 'lucide-react';
+import { ArrowDownUp, Ban, Bell, ChefHat, Check, CircleDollarSign, Clock3, ConciergeBell, CreditCard, Drumstick, Grid2X2, History, LogOut, Minus, Package, Pencil, Plus, Popcorn, Printer, QrCode, RefreshCw, Search, ShoppingBag, Store, CupSoda, Wallet, X } from 'lucide-react';
 import { signOut } from '../app/auth/actions';
 import { cancelCashierOrder, CashierOrder, CashierSnapshot, closeCashierShift, loadCashierData, openCashierShift, registerCashierMovement, registerCashierSale, updateCashierOrder } from '../app/cajero/actions';
 import { productPhotoUrl } from '../lib/products';
@@ -10,6 +10,10 @@ import { productPhotoUrl } from '../lib/products';
 const money = (value: number) => `Bs ${value.toLocaleString('es-BO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 type CartLine = { productId: string; quantity: number };
 type Panel = 'venta' | 'caja';
+type PaymentMethod = 'Efectivo' | 'QR' | 'Tarjeta' | 'Mixto';
+type MixedPayment = { Efectivo: string; QR: string; Tarjeta: string };
+type PaymentField = 'cashGiven' | keyof MixedPayment;
+const amountValue = (value: string) => Number(value.replace(',', '.')) || 0;
 
 export default function CashierApp() {
   const [data, setData] = useState<CashierSnapshot | null>(null);
@@ -33,6 +37,10 @@ export default function CashierApp() {
   const [historyQuery, setHistoryQuery] = useState('');
   const [salesTab, setSalesTab] = useState<'current' | 'history'>('current');
   const [editingOrderId, setEditingOrderId] = useState<string | null>(null);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [cashGiven, setCashGiven] = useState('');
+  const [mixedPayment, setMixedPayment] = useState<MixedPayment>({ Efectivo: '', QR: '', Tarjeta: '' });
+  const [activePaymentField, setActivePaymentField] = useState<PaymentField>('cashGiven');
 
   const refresh = useCallback(async () => {
     const result = await loadCashierData();
@@ -69,7 +77,7 @@ export default function CashierApp() {
     setEditingOrderId(order.id);
     setCart(order.lines.map(line => ({ productId: line.productId, quantity: line.quantity })));
     setCustomer(order.customer === 'Cliente de mostrador' ? '' : order.customer);
-    setMethod(['Efectivo', 'QR', 'Tarjeta'].includes(order.payment) ? order.payment : 'Efectivo');
+    setMethod(['Efectivo', 'QR', 'Tarjeta', 'Mixto'].includes(order.payment) ? order.payment : 'Efectivo');
     setSalesTab('current');
   }
 
@@ -96,6 +104,71 @@ export default function CashierApp() {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'No se pudo guardar.'); }
     finally { setBusy(false); }
     return false;
+  }
+
+  function openPaymentDialog() {
+    const mode = (editingOrder?.payment === 'Mixto' ? 'Mixto' : method) as PaymentMethod;
+    setMethod(mode);
+    if (mode === 'Mixto' && editingOrder) {
+      const values: MixedPayment = { Efectivo: '', QR: '', Tarjeta: '' };
+      for (const item of editingOrder.payments) if (item.method in values) values[item.method as keyof MixedPayment] = item.amount.toFixed(2);
+      setMixedPayment(values);
+      setCashGiven((amountValue(values.Efectivo) || total).toFixed(2));
+      setActivePaymentField('Efectivo');
+    } else {
+      setMixedPayment({ Efectivo: total.toFixed(2), QR: '', Tarjeta: '' });
+      setCashGiven(total.toFixed(2));
+      setActivePaymentField('cashGiven');
+    }
+    setPaymentOpen(true);
+  }
+
+  function setPaymentMode(value: PaymentMethod) {
+    setMethod(value);
+    if (value === 'Mixto') {
+      if (!Object.values(mixedPayment).some(amount => amountValue(amount) > 0)) setMixedPayment({ Efectivo: total.toFixed(2), QR: '', Tarjeta: '' });
+      setActivePaymentField('Efectivo');
+    } else {
+      setCashGiven(total.toFixed(2));
+      setActivePaymentField('cashGiven');
+    }
+  }
+
+  function writePaymentField(value: string) {
+    if (activePaymentField === 'cashGiven') setCashGiven(value);
+    else setMixedPayment(current => ({ ...current, [activePaymentField]: value }));
+  }
+
+  function pressPaymentKey(key: string) {
+    const current = activePaymentField === 'cashGiven' ? cashGiven : mixedPayment[activePaymentField];
+    if (key === '⌫') { writePaymentField(current.slice(0, -1)); return; }
+    if (key === '.' && current.includes('.')) return;
+    writePaymentField(`${current}${key}`);
+  }
+
+  function addQuickPayment(amount: number) {
+    const current = activePaymentField === 'cashGiven' ? cashGiven : mixedPayment[activePaymentField];
+    writePaymentField((amountValue(current) + amount).toFixed(2));
+  }
+
+  const splitTotal = Object.values(mixedPayment).reduce((sum, amount) => sum + amountValue(amount), 0);
+  const cashApplied = method === 'Mixto' ? amountValue(mixedPayment.Efectivo) : method === 'Efectivo' ? total : 0;
+  const changeAmount = Math.max(0, amountValue(cashGiven) - cashApplied);
+  const paymentItems = method === 'Mixto'
+    ? (['Efectivo', 'QR', 'Tarjeta'] as const).flatMap(key => amountValue(mixedPayment[key]) > 0 ? [{ method: key, amount: Number(amountValue(mixedPayment[key]).toFixed(2)) }] : [])
+    : [{ method, amount: Number(total.toFixed(2)) }];
+  const paymentMatchesTotal = method === 'Mixto'
+    ? Math.round(splitTotal * 100) === Math.round(total * 100) && paymentItems.length > 1 && amountValue(cashGiven) >= cashApplied
+    : method === 'Efectivo' ? amountValue(cashGiven) >= total : true;
+
+  function confirmPayment() {
+    if (!shift || !paymentMatchesTotal || !cart.length || busy) return;
+    const action = editingOrder
+      ? () => updateCashierOrder({ orderId: editingOrder.id, customer, items: cart.map(({ productId, quantity }) => ({ productId, quantity })), payments: paymentItems })
+      : () => registerCashierSale({ shiftId: shift.id, customer, items: cart.map(({ productId, quantity }) => ({ productId, quantity })), payments: paymentItems });
+    void submit(action, editingOrder ? 'Pedido actualizado.' : 'Venta registrada correctamente.').then(ok => {
+      if (ok) { setPaymentOpen(false); setCart([]); setCustomer(''); setEditingOrderId(null); setSalesTab('history'); }
+    });
   }
 
   if (!data) return <main className="cashier-loading"><ChefHat size={38} /><p>{error || 'Cargando caja…'}</p>{error && <button className="button" onClick={() => void refresh()}>Volver a intentar</button>}</main>;
@@ -133,14 +206,15 @@ export default function CashierApp() {
             <button className={salesTab === 'current' ? 'selected' : ''} onClick={() => setSalesTab('current')}><ShoppingBag size={19}/>Pedido actual{cart.length > 0 && <i>{cart.reduce((n, line) => n + line.quantity, 0)}</i>}</button>
             <button className={salesTab === 'history' ? 'selected' : ''} onClick={() => setSalesTab('history')}><History size={19}/>Historial del turno</button>
           </nav>
-          {salesTab === 'current' ? <section className="cashier-current-order"><div className="cashier-section-heading"><div><h2>{editingOrder ? `Editar ${editingOrder.ticket}` : 'Nuevo pedido'}</h2><p>{cart.reduce((n, line) => n + line.quantity, 0)} productos</p></div>{editingOrder && <button className="cashier-text-button" onClick={() => { setEditingOrderId(null); setCart([]); setCustomer(''); }} disabled={busy}>Cancelar edición</button>}</div><label className="cashier-customer">Cliente (opcional)<input value={customer} onChange={e => setCustomer(e.target.value)} placeholder="Cliente de mostrador" maxLength={160}/></label><div className="cashier-cart-lines">{cartProducts.map(item => <article className="cashier-cart-line" key={item.id}><div className="cashier-line-info"><strong>{item.name}</strong><small>{money(item.onSale && item.salePrice != null ? item.salePrice : item.price)} c/u</small></div><div className="cashier-quantity"><button onClick={() => changeQuantity(item.id,-1)} aria-label={`Quitar uno de ${item.name}`}><Minus size={13}/></button><span>{item.quantity}</span><button onClick={() => changeQuantity(item.id,1)} aria-label={`Agregar uno de ${item.name}`}><Plus size={13}/></button></div><strong className="cashier-line-total">{money(item.quantity*(item.onSale && item.salePrice != null ? item.salePrice : item.price))}</strong></article>)}{!cart.length && <div className="cashier-cart-empty"><ShoppingBag size={27}/><p>El pedido está vacío</p><small>Agrega platos desde el catálogo.</small></div>}</div><div className="cashier-checkout"><label>Método de pago<select value={method} onChange={e => setMethod(e.target.value)}><option>Efectivo</option><option>QR</option><option>Tarjeta</option></select></label><div className="cashier-total"><span>Total</span><strong>{money(total)}</strong></div><button className="button primary cashier-submit" disabled={!shift || !cart.length || busy} onClick={() => void submit(() => editingOrder && shift ? updateCashierOrder({ orderId: editingOrder.id, customer, items: cart.map(({productId,quantity})=>({productId,quantity})), method }) : shift ? registerCashierSale({ shiftId: shift.id, customer, items: cart.map(({productId,quantity})=>({productId,quantity})), method }) : Promise.resolve({ok:false,error:'Abre la caja para registrar ventas.'}), editingOrder ? 'Pedido actualizado.' : 'Venta registrada correctamente.').then(ok => { if (ok) { setCart([]); setCustomer(''); setEditingOrderId(null); setSalesTab('history'); } })}><Check size={17}/>{busy ? 'Guardando…' : editingOrder ? 'Guardar cambios' : 'Registrar pedido'}</button></div></section> : <section className="cashier-shift-board"><div className="cashier-shift-summary"><article><small>COMPLETADAS</small><strong>{completedCount}</strong></article><article><small>ANULADAS</small><strong>{cancelledCount}</strong></article><article><small>TOTAL DEL TURNO</small><strong>{money(data.todayTotal)}</strong></article></div><section className="cashier-sold-list"><h3>🍗 Platos vendidos en este turno</h3>{soldProducts.slice(0,12).map(product => <div key={product.name}><strong>{product.name}</strong><span>{product.quantity} unid.</span><b>{money(product.subtotal)}</b></div>)}{!soldProducts.length && <p className="cashier-empty">Todavía no hay productos vendidos en este turno.</p>}</section><div className="cashier-history-tools"><div className="cashier-history-filters">{['Todos','Completadas','Anuladas'].map(filter => <button key={filter} className={historyFilter===filter?'selected':''} onClick={() => setHistoryFilter(filter)}>{filter}</button>)}</div><label><Search size={15}/><input value={historyQuery} onChange={event => setHistoryQuery(event.target.value)} placeholder="Buscar por cliente o ticket…" aria-label="Buscar pedidos del turno"/></label></div><div className="cashier-order-history">{filteredHistory.map(order => <article key={order.id} className={order.status==='Cancelado'?'cancelled':''}><div className="cashier-order-ticket"><strong>#{order.ticket.replace(/^R-0*/, '')}</strong><small>{new Date(order.date).toLocaleTimeString('es-BO',{timeZone:'America/La_Paz',hour:'2-digit',minute:'2-digit'})}</small></div><div className="cashier-order-description"><strong>{order.status==='Cancelado'?'Anulada':order.status}</strong><small>{order.customer || 'Cliente de mostrador'} · {order.payment}</small></div><b className="cashier-order-amount">{money(order.total)}</b><div className="cashier-order-actions">{order.status!=='Cancelado' && shift && <button title="Editar pedido" aria-label={`Editar ${order.ticket}`} disabled={busy} onClick={() => beginEdit(order)}><Pencil size={15}/></button>}<button title="Reimprimir ticket" aria-label={`Reimprimir ${order.ticket}`} onClick={() => printTicket(order)}><Printer size={15}/></button>{order.status!=='Cancelado' && shift && <button title="Anular pedido" aria-label={`Anular ${order.ticket}`} disabled={busy} onClick={() => { if (window.confirm(`¿Anular el pedido ${order.ticket}? Se devolverá el stock de snacks.`)) void submit(() => cancelCashierOrder(order.id),'Pedido anulado.'); }}><Ban size={15}/></button>}</div></article>)}{!filteredHistory.length && <div className="cashier-empty">No hay pedidos que coincidan con este filtro.</div>}</div></section>}
+          {salesTab === 'current' ? <section className="cashier-current-order"><div className="cashier-section-heading"><div><h2>{editingOrder ? `Editar ${editingOrder.ticket}` : 'Nuevo pedido'}</h2><p>{cart.reduce((n, line) => n + line.quantity, 0)} productos</p></div>{editingOrder && <button className="cashier-text-button" onClick={() => { setEditingOrderId(null); setCart([]); setCustomer(''); }} disabled={busy}>Cancelar edición</button>}</div><label className="cashier-customer">Cliente (opcional)<input value={customer} onChange={e => setCustomer(e.target.value)} placeholder="Cliente de mostrador" maxLength={160}/></label><div className="cashier-cart-lines">{cartProducts.map(item => <article className="cashier-cart-line" key={item.id}><div className="cashier-line-info"><strong>{item.name}</strong><small>{money(item.onSale && item.salePrice != null ? item.salePrice : item.price)} c/u</small></div><div className="cashier-quantity"><button onClick={() => changeQuantity(item.id,-1)} aria-label={`Quitar uno de ${item.name}`}><Minus size={13}/></button><span>{item.quantity}</span><button onClick={() => changeQuantity(item.id,1)} aria-label={`Agregar uno de ${item.name}`}><Plus size={13}/></button></div><strong className="cashier-line-total">{money(item.quantity*(item.onSale && item.salePrice != null ? item.salePrice : item.price))}</strong></article>)}{!cart.length && <div className="cashier-cart-empty"><ShoppingBag size={27}/><p>El pedido está vacío</p><small>Agrega platos desde el catálogo.</small></div>}</div><div className="cashier-checkout"><div className="cashier-total"><span>Total</span><strong>{money(total)}</strong></div><button className="button primary cashier-submit" disabled={!shift || !cart.length || busy} onClick={openPaymentDialog}><CircleDollarSign size={17}/>{editingOrder ? 'Continuar al pago' : 'Cobrar pedido'}</button></div></section> : <section className="cashier-shift-board"><div className="cashier-shift-summary"><article><small>COMPLETADAS</small><strong>{completedCount}</strong></article><article><small>ANULADAS</small><strong>{cancelledCount}</strong></article><article><small>TOTAL DEL TURNO</small><strong>{money(data.todayTotal)}</strong></article></div><section className="cashier-sold-list"><h3>🍗 Platos vendidos en este turno</h3>{soldProducts.slice(0,12).map(product => <div key={product.name}><strong>{product.name}</strong><span>{product.quantity} unid.</span><b>{money(product.subtotal)}</b></div>)}{!soldProducts.length && <p className="cashier-empty">Todavía no hay productos vendidos en este turno.</p>}</section><div className="cashier-history-tools"><div className="cashier-history-filters">{['Todos','Completadas','Anuladas'].map(filter => <button key={filter} className={historyFilter===filter?'selected':''} onClick={() => setHistoryFilter(filter)}>{filter}</button>)}</div><label><Search size={15}/><input value={historyQuery} onChange={event => setHistoryQuery(event.target.value)} placeholder="Buscar por cliente o ticket…" aria-label="Buscar pedidos del turno"/></label></div><div className="cashier-order-history">{filteredHistory.map(order => <article key={order.id} className={order.status==='Cancelado'?'cancelled':''}><div className="cashier-order-ticket"><strong>#{order.ticket.replace(/^R-0*/, '')}</strong><small>{new Date(order.date).toLocaleTimeString('es-BO',{timeZone:'America/La_Paz',hour:'2-digit',minute:'2-digit'})}</small></div><div className="cashier-order-description"><strong>{order.status==='Cancelado'?'Anulada':order.status}</strong><small>{order.customer || 'Cliente de mostrador'} · {order.payment}</small></div><b className="cashier-order-amount">{money(order.total)}</b><div className="cashier-order-actions">{order.status!=='Cancelado' && shift && <button title="Editar pedido" aria-label={`Editar ${order.ticket}`} disabled={busy} onClick={() => beginEdit(order)}><Pencil size={15}/></button>}<button title="Reimprimir ticket" aria-label={`Reimprimir ${order.ticket}`} onClick={() => printTicket(order)}><Printer size={15}/></button>{order.status!=='Cancelado' && shift && <button title="Anular pedido" aria-label={`Anular ${order.ticket}`} disabled={busy} onClick={() => { if (window.confirm(`¿Anular el pedido ${order.ticket}? Se devolverá el stock de snacks.`)) void submit(() => cancelCashierOrder(order.id),'Pedido anulado.'); }}><Ban size={15}/></button>}</div></article>)}{!filteredHistory.length && <div className="cashier-empty">No hay pedidos que coincidan con este filtro.</div>}</div></section>}
         </aside>
       </div>
     </>}
     {panel === 'caja' && <><div className="cashier-cash-heading"><div><p className="eyebrow">TURNO · {data.branchName}</p><h1>Caja</h1></div><button className="button" onClick={() => setPanel('venta')}><ShoppingBag size={16}/>Volver a ventas</button></div><div className="cashier-cash-grid">{!shift ? <section className="cashier-cash-card"><div className="cashier-cash-icon"><Wallet size={22} /></div><h2>Abrir turno de caja</h2><p>Cuenta el efectivo con el que inicias. Solo puede haber un turno abierto en esta sucursal.</p><form onSubmit={event => { event.preventDefault(); void submit(() => openCashierShift({ opening: Number(opening), notes: openingNotes }), 'Turno de caja abierto.'); }}><label>Fondo inicial (Bs)<input type="number" min="0" step="0.01" required value={opening} onChange={e => setOpening(e.target.value)} placeholder="0.00" /></label><label>Observaciones (opcional)<textarea maxLength={1000} rows={3} value={openingNotes} onChange={e => setOpeningNotes(e.target.value)} placeholder="Notas de apertura…" /></label><button className="button primary" disabled={busy}><Check size={16} />Abrir caja</button></form></section> : <>
       <section className="cashier-cash-card"><div className="cashier-cash-card-heading"><div><div className="cashier-cash-icon"><Wallet size={22} /></div><h2>Turno abierto</h2><p>{data.branchName} · {new Date(shift.openedAt).toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}</p></div><span className="cashier-shift-pill is-open"><i />Activo</span></div><div className="cashier-cash-numbers"><div><small>Fondo inicial</small><strong>{money(shift.opening)}</strong></div><div><small>Efectivo esperado</small><strong>{money(data.expectedCash)}</strong></div></div><div className="cashier-movement"><h3>Registrar ingreso o egreso</h3><form onSubmit={event => { event.preventDefault(); void submit(() => registerCashierMovement({ shiftId: shift.id, type: movementType, amount: Number(movementAmount), concept: movementConcept }), 'Movimiento de caja registrado.'); setMovementAmount(''); setMovementConcept(''); }}><label>Tipo<select value={movementType} onChange={e => setMovementType(e.target.value)}><option>Ingreso</option><option>Egreso</option></select></label><label>Monto (Bs)<input type="number" min="0.01" step="0.01" required value={movementAmount} onChange={e => setMovementAmount(e.target.value)} placeholder="0.00" /></label><label className="cashier-movement-concept">Concepto<input maxLength={200} required value={movementConcept} onChange={e => setMovementConcept(e.target.value)} placeholder="Ej. Cambio para caja" /></label><button className="button" disabled={busy}><ArrowDownUp size={15} />Registrar movimiento</button></form></div></section>
       <section className="cashier-cash-card cashier-close-card"><div className="cashier-cash-icon"><Check size={22} /></div><h2>Cerrar turno</h2><p>Cuenta el efectivo disponible. El sistema guardará el monto esperado y cualquier diferencia.</p><form onSubmit={event => { event.preventDefault(); void submit(() => closeCashierShift({ shiftId: shift.id, counted: Number(counted), notes: closeNotes }), 'Turno cerrado y arqueo guardado.'); }}><label>Efectivo contado (Bs)<input type="number" min="0" step="0.01" required value={counted} onChange={e => setCounted(e.target.value)} placeholder={data.expectedCash.toFixed(2)} /></label><label>Observaciones del cierre<input maxLength={1000} value={closeNotes} onChange={e => setCloseNotes(e.target.value)} placeholder="Notas opcionales…" /></label><div className="cashier-expected"><span>Diferencia estimada</span><strong>{money(Number(counted || 0) - data.expectedCash)}</strong></div><button className="button primary" disabled={busy}><Check size={16} />Cerrar y guardar arqueo</button></form></section>
-      </>}</div></>}
+    </>}</div></>}
+    {paymentOpen && panel === 'venta' && <div className="cashier-payment-overlay" onMouseDown={() => !busy && setPaymentOpen(false)}><section className="cashier-payment-dialog" role="dialog" aria-modal="true" aria-labelledby="cashier-payment-title" onMouseDown={event => event.stopPropagation()}><header><div><small>COBRO DEL PEDIDO</small><h2 id="cashier-payment-title">Registrar pago</h2></div><button type="button" aria-label="Cerrar cobro" onClick={() => !busy && setPaymentOpen(false)}><X size={19}/></button></header><div className="cashier-payment-due"><span>Total a pagar</span><strong>{money(total)}</strong></div><div className="cashier-payment-methods">{([{id:'Efectivo',label:'Efectivo',icon:CircleDollarSign},{id:'QR',label:'QR',icon:QrCode},{id:'Tarjeta',label:'Tarjeta',icon:CreditCard},{id:'Mixto',label:'Mixto',icon:ArrowDownUp}] as const).map(({id,label,icon:Icon}) => <button type="button" key={id} className={method===id?'selected':''} onClick={() => setPaymentMode(id)}><Icon size={18}/>{label}</button>)}</div>{method==='Mixto' ? <div className="cashier-payment-splits"><div className="cashier-payment-split-heading"><strong>Distribuye el total entre los métodos</strong><span className={Math.round(splitTotal*100)===Math.round(total*100)?'balanced':''}>{money(splitTotal)} / {money(total)}</span></div><div className="cashier-payment-split-fields">{(['Efectivo','QR','Tarjeta'] as const).map((key) => <label key={key} className={activePaymentField===key?'active':''} onClick={() => setActivePaymentField(key)}>{key}<span>Bs.</span><input type="number" min="0" step="0.01" inputMode="decimal" value={mixedPayment[key]} onFocus={() => setActivePaymentField(key)} onChange={event => setMixedPayment(current => ({...current,[key]:event.target.value}))} placeholder="0.00" aria-label={`Monto por ${key}`}/></label>)}</div>{amountValue(mixedPayment.Efectivo)>0 && <label className={`cashier-payment-given ${activePaymentField==='cashGiven'?'active':''}`}>Efectivo que entrega el cliente<span>Bs.</span><input type="number" min="0" step="0.01" inputMode="decimal" value={cashGiven} onFocus={() => setActivePaymentField('cashGiven')} onChange={event => setCashGiven(event.target.value)} placeholder="0.00"/></label>}</div> : method==='Efectivo' ? <label className={`cashier-payment-given ${activePaymentField==='cashGiven'?'active':''}`}>Monto que entrega el cliente<span>Bs.</span><input type="number" min="0" step="0.01" inputMode="decimal" value={cashGiven} onFocus={() => setActivePaymentField('cashGiven')} onChange={event => setCashGiven(event.target.value)} placeholder="0.00"/></label> : <div className="cashier-payment-card-note"><span>Monto a cobrar por {method}</span><strong>{money(total)}</strong><small>Confirma el pago recibido antes de registrar el pedido.</small></div>}<div className="cashier-payment-results"><div><span>{method==='Mixto'?'Total distribuido':'Por cobrar'}</span><strong>{method==='Mixto'?money(splitTotal):money(total)}</strong></div>{(method==='Efectivo'||method==='Mixto') && <><div><span>Efectivo entregado</span><strong>{money(amountValue(cashGiven))}</strong></div><div className="cashier-change"><span>Vuelto</span><strong>{money(changeAmount)}</strong></div></>}</div><div className="cashier-payment-pad"><div className="cashier-number-pad">{['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(key => <button type="button" key={key} onClick={() => pressPaymentKey(key)}>{key}</button>)}</div><div className="cashier-quick-pad">{[10,50,100].map(amount => <button type="button" key={amount} onClick={() => addQuickPayment(amount)}>+{amount}</button>)}<button type="button" onClick={() => writePaymentField('')}>Borrar</button></div></div>{!paymentMatchesTotal && <p className="cashier-payment-warning">{method==='Mixto'?'Distribuye el total completo en al menos dos métodos y verifica el efectivo recibido.':'El monto recibido debe cubrir el total del pedido.'}</p>}<footer><button type="button" className="cashier-payment-cancel" onClick={() => setPaymentOpen(false)} disabled={busy}>Cancelar</button><button type="button" className="cashier-payment-confirm" onClick={confirmPayment} disabled={busy||!paymentMatchesTotal}>{busy?'Guardando…':editingOrder?'Confirmar cambios':'Confirmar pedido'}<Check size={17}/></button></footer></section></div>}
     <footer className="cashier-footer">{data.businessName} · Punto de venta · {data.branchName}</footer>
   </main>;
 }

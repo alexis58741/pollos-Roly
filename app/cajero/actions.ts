@@ -5,7 +5,7 @@ import { requireCashier } from '../../lib/supabase/server';
 import { localDate } from '../../lib/data';
 
 export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; snack: boolean; stock: number | null };
-export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number }[] };
+export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; payments: { method: string; amount: number }[]; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number }[] };
 export type CashierSnapshot = {
   profileName: string; branchId: string; branchName: string; businessName: string;
   products: CashierProduct[]; shift: { id: string; opening: number; openedAt: string; notes: string } | null;
@@ -14,7 +14,7 @@ export type CashierSnapshot = {
 
 function message(error: { message?: string; code?: string } | null, fallback: string) {
   if (error?.code === '42501') return 'No tienes permiso para esta operación. Confirma que ejecutaste database/11_cajero.sql en Supabase.';
-  if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan funciones de caja o pedidos. Ejecuta database/11_cajero.sql y database/12_cajero_pedidos.sql en Supabase.';
+  if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan funciones de caja o pedidos. Ejecuta database/11_cajero.sql, database/12_cajero_pedidos.sql y database/13_cajero_pagos_mixtos.sql en Supabase.';
   return error?.message || fallback;
 }
 
@@ -72,7 +72,7 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
       const orderPayments = payments.get(String(o.id)) || [];
       const uniqueMethods = [...new Set(orderPayments.map(p => p.method))];
       const lines = details.get(String(o.id)) || [];
-      return { id: String(o.id), ticket: `R-${String(o.numero).padStart(4, '0')}`, customer: String(o.cliente), total: Number(o.total), payment: uniqueMethods.length > 1 ? 'Mixto' : uniqueMethods[0] || '—', status: String(o.estado), date: String(o.created_at), items: lines.map(line => `${line.quantity} × ${line.name}`).join(' · '), lines };
+      return { id: String(o.id), ticket: `R-${String(o.numero).padStart(4, '0')}`, customer: String(o.cliente), total: Number(o.total), payment: uniqueMethods.length > 1 ? 'Mixto' : uniqueMethods[0] || '—', payments: orderPayments, status: String(o.estado), date: String(o.created_at), items: lines.map(line => `${line.quantity} × ${line.name}`).join(' · '), lines };
     });
     return { data: {
       profileName: [profile.nombre, profile.apellido].filter(Boolean).join(' ').trim() || user.email || 'Cajero',
@@ -101,11 +101,12 @@ export async function openCashierShift(input: { opening: number; notes: string }
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo abrir la caja.' }; }
 }
 
-export async function registerCashierSale(input: { shiftId: string; customer: string; items: { productId: string; quantity: number }[]; method: string }) {
+export async function registerCashierSale(input: { shiftId: string; customer: string; items: { productId: string; quantity: number }[]; payments: { method: string; amount: number }[] }) {
   try {
     const { db, profile } = await requireCashier();
     if (!/^[0-9a-f-]{36}$/i.test(input.shiftId) || !Array.isArray(input.items) || !input.items.length || input.items.length > 100) return { ok: false as const, error: 'Revisa el pedido antes de registrarlo.' };
-    if (!['Efectivo', 'QR', 'Tarjeta'].includes(input.method)) return { ok: false as const, error: 'Selecciona un método de pago válido.' };
+    const payments = input.payments.map(payment => ({ metodo: payment.method, monto: Number(payment.amount.toFixed(2)) }));
+    if (!payments.length || payments.length > 3 || payments.some(payment => !['Efectivo', 'QR', 'Tarjeta'].includes(payment.metodo) || !Number.isFinite(payment.monto) || payment.monto <= 0) || new Set(payments.map(payment => payment.metodo)).size !== payments.length) return { ok: false as const, error: 'Revisa los métodos y montos del pago.' };
     const items = input.items.map(item => ({ producto_id: item.productId, cantidad: Number(item.quantity) }));
     if (items.some(item => !/^[0-9a-f-]{36}$/i.test(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 100000)) return { ok: false as const, error: 'Hay una cantidad de producto inválida.' };
     const { data: prices, error: priceError } = await db.from('productos').select('id,precio,precio_oferta,en_oferta, categoria:categorias!inner(activa)').in('id', items.map(i => i.producto_id)).eq('activo', true).eq('categoria.activa', true);
@@ -116,20 +117,22 @@ export async function registerCashierSale(input: { shiftId: string; customer: st
       const price = row.en_oferta === true && row.precio_oferta != null ? Number(row.precio_oferta) : Number(row.precio);
       return sum + price * item.cantidad;
     }, 0);
-    const result = await db.rpc('registrar_pedido', { p_turno: input.shiftId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_pagos: [{ metodo: input.method, monto: Number(total.toFixed(2)) }] });
+    if (Math.round(payments.reduce((sum, payment) => sum + payment.monto, 0) * 100) !== Math.round(total * 100)) return { ok: false as const, error: 'La suma de los métodos de pago debe ser igual al total del pedido.' };
+    const result = await db.rpc('registrar_pedido', { p_turno: input.shiftId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_pagos: payments });
     if (result.error) return { ok: false as const, error: message(result.error, 'No se pudo registrar la venta.') };
     return { ok: true as const, result: await reload() };
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo registrar la venta.' }; }
 }
 
-export async function updateCashierOrder(input: { orderId: string; customer: string; items: { productId: string; quantity: number }[]; method: string }) {
+export async function updateCashierOrder(input: { orderId: string; customer: string; items: { productId: string; quantity: number }[]; payments: { method: string; amount: number }[] }) {
   try {
     const { db } = await requireCashier();
     if (!/^[0-9a-f-]{36}$/i.test(input.orderId) || !Array.isArray(input.items) || !input.items.length || input.items.length > 100) return { ok: false as const, error: 'Revisa el pedido antes de guardarlo.' };
-    if (!['Efectivo', 'QR', 'Tarjeta'].includes(input.method)) return { ok: false as const, error: 'Selecciona un método de pago válido.' };
+    const payments = input.payments.map(payment => ({ metodo: payment.method, monto: Number(payment.amount.toFixed(2)) }));
+    if (!payments.length || payments.length > 3 || payments.some(payment => !['Efectivo', 'QR', 'Tarjeta'].includes(payment.metodo) || !Number.isFinite(payment.monto) || payment.monto <= 0) || new Set(payments.map(payment => payment.metodo)).size !== payments.length) return { ok: false as const, error: 'Revisa los métodos y montos del pago.' };
     const items = input.items.map(item => ({ producto_id: item.productId, cantidad: Number(item.quantity) }));
     if (items.some(item => !/^[0-9a-f-]{36}$/i.test(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 100000)) return { ok: false as const, error: 'Hay una cantidad de producto inválida.' };
-    const { error } = await db.rpc('actualizar_pedido_cajero', { p_pedido: input.orderId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_metodo: input.method });
+    const { error } = await db.rpc('actualizar_pedido_cajero_mixto', { p_pedido: input.orderId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_pagos: payments });
     if (error) return { ok: false as const, error: message(error, 'No se pudo actualizar el pedido.') };
     return { ok: true as const, result: await reload() };
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo actualizar el pedido.' }; }
