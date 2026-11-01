@@ -5,7 +5,7 @@ import { requireCashier } from '../../lib/supabase/server';
 import { localDate } from '../../lib/data';
 
 export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; snack: boolean; stock: number | null };
-export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; status: string; date: string; items: string; lines: { name: string; quantity: number; subtotal: number }[] };
+export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number }[] };
 export type CashierSnapshot = {
   profileName: string; branchId: string; branchName: string; businessName: string;
   products: CashierProduct[]; shift: { id: string; opening: number; openedAt: string; notes: string } | null;
@@ -14,7 +14,7 @@ export type CashierSnapshot = {
 
 function message(error: { message?: string; code?: string } | null, fallback: string) {
   if (error?.code === '42501') return 'No tienes permiso para esta operación. Confirma que ejecutaste database/11_cajero.sql en Supabase.';
-  if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan las funciones del cajero. Ejecuta database/11_cajero.sql en Supabase.';
+  if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan funciones de caja o pedidos. Ejecuta database/11_cajero.sql y database/12_cajero_pedidos.sql en Supabase.';
   return error?.message || fallback;
 }
 
@@ -44,19 +44,25 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
     });
 
     const dayStart = `${localDate()}T00:00:00-04:00`;
-    let orderQuery = db.from('pedidos').select('id,numero,cliente,total,estado,created_at,turno_id').eq('sucursal_id', profile.sucursal_id).gte('created_at', dayStart).order('created_at', { ascending: false }).limit(200);
+    let orderQuery = db.from('pedidos').select('id,numero,cliente,total,estado,created_at,turno_id').eq('sucursal_id', profile.sucursal_id).order('created_at', { ascending: false });
     if (shiftResult.data) orderQuery = orderQuery.eq('turno_id', shiftResult.data.id);
-    const { data: orderRows, error: ordersError } = await orderQuery;
-    if (ordersError) throw new Error(message(ordersError, 'No se pudieron consultar las ventas de hoy.'));
+    else orderQuery = orderQuery.gte('created_at', dayStart);
+    const orderRows: { id: string; numero: number; cliente: string; total: number; estado: string; created_at: string; turno_id: string }[] = [];
+    for (let offset = 0; ; offset += 500) {
+      const { data: page, error: ordersError } = await orderQuery.range(offset, offset + 499);
+      if (ordersError) throw new Error(message(ordersError, 'No se pudieron consultar las ventas del turno.'));
+      orderRows.push(...(page || []));
+      if (!page || page.length < 500) break;
+    }
     const orderIds = (orderRows || []).map(o => String(o.id));
     const [detailResult, paymentResult, movementResult] = await Promise.all([
-      orderIds.length ? db.from('detalle_pedido').select('pedido_id,nombre_producto,cantidad,subtotal').in('pedido_id', orderIds) : Promise.resolve({ data: [], error: null }),
+      orderIds.length ? db.from('detalle_pedido').select('pedido_id,producto_id,nombre_producto,cantidad,subtotal').in('pedido_id', orderIds) : Promise.resolve({ data: [], error: null }),
       orderIds.length ? db.from('pagos_pedido').select('pedido_id,metodo,monto').in('pedido_id', orderIds) : Promise.resolve({ data: [], error: null }),
       shiftResult.data ? db.from('movimientos_caja').select('tipo,monto').eq('turno_id', shiftResult.data.id) : Promise.resolve({ data: [], error: null }),
     ]);
     if (detailResult.error || paymentResult.error || movementResult.error) throw new Error(message(detailResult.error || paymentResult.error || movementResult.error, 'No se pudo cargar el resumen de caja.'));
-    const details = new Map<string, { name: string; quantity: number; subtotal: number }[]>();
-    for (const item of detailResult.data || []) details.set(String(item.pedido_id), [...(details.get(String(item.pedido_id)) || []), { name: String(item.nombre_producto), quantity: Number(item.cantidad), subtotal: Number(item.subtotal) }]);
+    const details = new Map<string, { productId: string; name: string; quantity: number; subtotal: number }[]>();
+    for (const item of detailResult.data || []) details.set(String(item.pedido_id), [...(details.get(String(item.pedido_id)) || []), { productId: String(item.producto_id), name: String(item.nombre_producto), quantity: Number(item.cantidad), subtotal: Number(item.subtotal) }]);
     const payments = new Map<string, { method: string; amount: number }[]>();
     for (const payment of paymentResult.data || []) payments.set(String(payment.pedido_id), [...(payments.get(String(payment.pedido_id)) || []), { method: String(payment.metodo), amount: Number(payment.monto) }]);
     const orders = orderRows || [];
@@ -114,6 +120,29 @@ export async function registerCashierSale(input: { shiftId: string; customer: st
     if (result.error) return { ok: false as const, error: message(result.error, 'No se pudo registrar la venta.') };
     return { ok: true as const, result: await reload() };
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo registrar la venta.' }; }
+}
+
+export async function updateCashierOrder(input: { orderId: string; customer: string; items: { productId: string; quantity: number }[]; method: string }) {
+  try {
+    const { db } = await requireCashier();
+    if (!/^[0-9a-f-]{36}$/i.test(input.orderId) || !Array.isArray(input.items) || !input.items.length || input.items.length > 100) return { ok: false as const, error: 'Revisa el pedido antes de guardarlo.' };
+    if (!['Efectivo', 'QR', 'Tarjeta'].includes(input.method)) return { ok: false as const, error: 'Selecciona un método de pago válido.' };
+    const items = input.items.map(item => ({ producto_id: item.productId, cantidad: Number(item.quantity) }));
+    if (items.some(item => !/^[0-9a-f-]{36}$/i.test(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 100000)) return { ok: false as const, error: 'Hay una cantidad de producto inválida.' };
+    const { error } = await db.rpc('actualizar_pedido_cajero', { p_pedido: input.orderId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_metodo: input.method });
+    if (error) return { ok: false as const, error: message(error, 'No se pudo actualizar el pedido.') };
+    return { ok: true as const, result: await reload() };
+  } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo actualizar el pedido.' }; }
+}
+
+export async function cancelCashierOrder(orderId: string) {
+  try {
+    const { db } = await requireCashier();
+    if (!/^[0-9a-f-]{36}$/i.test(orderId)) return { ok: false as const, error: 'Pedido inválido.' };
+    const { error } = await db.rpc('anular_pedido_cajero', { p_pedido: orderId });
+    if (error) return { ok: false as const, error: message(error, 'No se pudo anular el pedido.') };
+    return { ok: true as const, result: await reload() };
+  } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo anular el pedido.' }; }
 }
 
 export async function registerCashierMovement(input: { shiftId: string; type: string; amount: number; concept: string }) {

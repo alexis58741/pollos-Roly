@@ -3,6 +3,7 @@
 @import './cashier.css';
 @import './cashier-opening.css';
 @import './cashier-pos.css';
+@import './cashier-sales.css';
 
 :root{--bg:#f7f8fa;--ink:#242b32;--muted:#8a8e96;--orange:#e77132;--line:#edf0f2;--green:#508568;--font: 'DM Sans',Arial,sans-serif}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:13px;-webkit-font-smoothing:antialiased}button,input,select,textarea{font:inherit}button,a,input,select,textarea{-webkit-tap-highlight-color:transparent}button,a,select{cursor:pointer}a{color:inherit;text-decoration:none}button{color:inherit}button:disabled{cursor:default;opacity:.35}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid #edac7e;outline-offset:3px}button{background:none;border:0}input,select,textarea{min-width:0}h1,h2,p{margin:0}h1,h2,.brand{font-family:Manrope,var(--font)}h1{font-size:28px;letter-spacing:-1.1px;font-weight:750;line-height:1.35}h2{font-size:15px;font-weight:750;letter-spacing:-.3px}.muted{color:var(--muted)}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
