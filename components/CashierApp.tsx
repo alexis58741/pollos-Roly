@@ -52,7 +52,7 @@ export default function CashierApp() {
   useEffect(() => {
     if (data?.shift) setCounted(data.expectedCash.toFixed(2));
     else setCounted('');
-  }, [data?.shift?.id]);
+  }, [data?.shift?.id, data?.expectedCash]);
 
   const categories = useMemo(() => ['Todos', ...new Set(data?.products.map(p => p.category) || [])], [data?.products]);
   const products = useMemo(() => (data?.products || []).filter(p => category === 'Todos' || p.category === category), [data?.products, category]);
