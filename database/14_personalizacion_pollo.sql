@@ -81,6 +81,9 @@ returns uuid language plpgsql security definer set search_path = '' as $$
 declare v_item record; v_pedido uuid;
 begin
   v_pedido:=public.registrar_pedido_base(p_turno,p_cliente,p_items,p_pagos);
+  if exists(select 1 from jsonb_to_recordset(p_pagos) as x(metodo text) where metodo not in ('Efectivo','QR')) then
+    raise exception 'En caja solo se acepta Efectivo o QR.';
+  end if;
   if p_items is null or jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items)=0 or jsonb_array_length(p_items)>100 then
     raise exception 'El pedido necesita productos.';
   end if;
@@ -100,6 +103,9 @@ create or replace function public.actualizar_pedido_cajero_mixto(
 declare v_item record;
 begin
   perform public.actualizar_pedido_cajero_mixto_base(p_pedido,p_cliente,p_items,p_pagos);
+  if exists(select 1 from jsonb_to_recordset(p_pagos) as x(metodo text) where metodo not in ('Efectivo','QR')) then
+    raise exception 'En caja solo se acepta Efectivo o QR.';
+  end if;
   if p_items is null or jsonb_typeof(p_items)<>'array' or jsonb_array_length(p_items)=0 or jsonb_array_length(p_items)>100 then
     raise exception 'El pedido necesita productos.';
   end if;
