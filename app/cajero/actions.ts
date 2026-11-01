@@ -120,7 +120,7 @@ export async function registerCashierSale(input: { shiftId: string; customer: st
     if (Math.round(payments.reduce((sum, payment) => sum + payment.monto, 0) * 100) !== Math.round(total * 100)) return { ok: false as const, error: 'La suma de los métodos de pago debe ser igual al total del pedido.' };
     const result = await db.rpc('registrar_pedido', { p_turno: input.shiftId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_pagos: payments });
     if (result.error) return { ok: false as const, error: message(result.error, 'No se pudo registrar la venta.') };
-    return { ok: true as const, result: await reload() };
+    return { ok: true as const, orderId: String(result.data), result: await reload() };
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo registrar la venta.' }; }
 }
 
@@ -134,7 +134,7 @@ export async function updateCashierOrder(input: { orderId: string; customer: str
     if (items.some(item => !/^[0-9a-f-]{36}$/i.test(item.producto_id) || !Number.isInteger(item.cantidad) || item.cantidad < 1 || item.cantidad > 100000)) return { ok: false as const, error: 'Hay una cantidad de producto inválida.' };
     const { error } = await db.rpc('actualizar_pedido_cajero_mixto', { p_pedido: input.orderId, p_cliente: String(input.customer || '').trim().slice(0, 160), p_items: items, p_pagos: payments });
     if (error) return { ok: false as const, error: message(error, 'No se pudo actualizar el pedido.') };
-    return { ok: true as const, result: await reload() };
+    return { ok: true as const, orderId: input.orderId, result: await reload() };
   } catch (error) { return { ok: false as const, error: error instanceof Error ? error.message : 'No se pudo actualizar el pedido.' }; }
 }
 

@@ -139,3 +139,20 @@
 .cashier-payment-confirm{border:1px solid #f92737;background:linear-gradient(110deg,#f21329,#ad0011);color:#fff;box-shadow:0 7px 20px #e600283e}
 .cashier-payment-confirm:disabled{opacity:.45;box-shadow:none}
 @media(max-width:600px){.cashier-payment-overlay{align-items:end;padding:0}.cashier-payment-dialog{width:100%;max-height:94dvh;padding:16px 14px calc(16px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0}.cashier-payment-methods{gap:5px}.cashier-payment-methods button{flex-direction:column;gap:4px;font-size:9px}.cashier-payment-split-fields{gap:5px}.cashier-payment-split-fields label{padding:7px 5px;font-size:9px}.cashier-payment-split-fields label span{left:6px;bottom:9px}.cashier-payment-split-fields input{font-size:13px}.cashier-payment-due strong{font-size:22px}.cashier-payment-pad{grid-template-columns:1fr .48fr}.cashier-number-pad button,.cashier-quick-pad button{min-height:35px}}
+.cashier-page:not(.is-opening) .cashier-catalog-tools{gap:0;margin:12px 0 14px}
+.cashier-payment-dialog{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,.9fr);align-items:start;gap:10px 16px;width:min(100%,790px);max-height:86dvh;padding:16px;overflow:auto}
+.cashier-payment-dialog>header{grid-column:1/-1;grid-row:1;margin:0}
+.cashier-payment-due{grid-column:1/-1;grid-row:2;margin:0}
+.cashier-payment-customer{grid-column:1;grid-row:3;display:flex;flex-direction:column;gap:6px;color:#c5c9cb;font-size:10px;font-weight:700}
+.cashier-payment-customer input{width:100%;height:42px;padding:0 11px;border:1px solid #465057;border-radius:9px;outline:0;background:#111619;color:#fff;font-size:12px}
+.cashier-payment-customer input:focus{border-color:#ff6a46;box-shadow:0 0 0 2px #ff6a462e}
+.cashier-payment-methods{grid-column:1/-1;grid-row:4;margin:0}
+.cashier-payment-splits,.cashier-payment-dialog>.cashier-payment-given,.cashier-payment-card-note{grid-column:1;grid-row:5;margin:0}
+.cashier-payment-results{grid-column:2;grid-row:5;grid-template-columns:1fr;align-content:start;margin:0}
+.cashier-payment-results>div{min-height:38px}
+.cashier-payment-pad{grid-column:2;grid-row:6;align-self:stretch;grid-template-columns:minmax(0,1fr) .56fr;gap:8px;margin:0}
+.cashier-number-pad{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(37px,1fr)}
+.cashier-quick-pad{grid-template-columns:1fr 1fr;grid-auto-rows:minmax(37px,1fr)}
+.cashier-payment-warning{grid-column:1/-1;grid-row:7;margin:0}
+.cashier-payment-dialog>footer{grid-column:1/-1;grid-row:8;margin:0}
+@media(max-width:650px){.cashier-payment-dialog{grid-template-columns:1fr;gap:11px;width:100%;max-height:94dvh;padding:15px 14px calc(15px + env(safe-area-inset-bottom));border-radius:18px 18px 0 0}.cashier-payment-dialog>header,.cashier-payment-due,.cashier-payment-customer,.cashier-payment-methods,.cashier-payment-splits,.cashier-payment-dialog>.cashier-payment-given,.cashier-payment-card-note,.cashier-payment-results,.cashier-payment-pad,.cashier-payment-warning,.cashier-payment-dialog>footer{grid-column:1;grid-row:auto}.cashier-payment-methods{grid-template-columns:repeat(4,minmax(0,1fr))}.cashier-payment-methods button{flex-direction:column;min-height:48px;gap:4px;font-size:9px}.cashier-payment-results{grid-template-columns:1fr 1fr}.cashier-payment-results>div{min-height:40px}.cashier-payment-pad{grid-template-columns:minmax(0,1fr) .52fr}.cashier-number-pad,.cashier-quick-pad{grid-auto-rows:minmax(34px,1fr)}}
