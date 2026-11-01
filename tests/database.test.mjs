@@ -196,5 +196,11 @@ try {
   assert.equal(Number(await scalar(`select cantidad_almacen from public.stock_bebidas where producto_id='${beverage}'`)), 3);
   assert.equal(Number(await scalar(`select count(*) from public.alertas_stock where tipo='Bebida' and referencia_id=(select id from public.stock_bebidas where producto_id='${beverage}')`)), 0);
   console.log('OK · bebidas: migración repetible, descuento freezer/almacén, límite de stock, anulación y alertas');
+  const completionMigration = await readFile(new URL('../database/16_pedidos_completados.sql', import.meta.url), 'utf8');
+  await db.exec(completionMigration);
+  await db.exec(completionMigration);
+  const completedOrder = await scalar(`select public.registrar_pedido('${beverageShift}','Prueba completado','[{"producto_id":"${beverage}","cantidad":1}]','[{"metodo":"Efectivo","monto":5}]')`);
+  assert.equal(await scalar(`select estado from public.pedidos where id='${completedOrder}'`), 'Entregado');
+  console.log('OK · pedidos nuevos quedan completados automáticamente');
   console.log('Todas las pruebas SQL pasaron (PostgreSQL embebido con auth simulado).');
 } finally { await db.close(); }
