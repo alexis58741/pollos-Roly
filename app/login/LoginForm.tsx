@@ -89,8 +89,6 @@ export default function LoginForm() {
             <ArrowRight size={25} />
           </button>
         </form>
-
-        <div className="login-security"><LockKeyhole size={17} />Conexión protegida con Supabase</div>
       </section>
     </main>
   );
