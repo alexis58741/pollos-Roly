@@ -85,7 +85,7 @@ export default function LoginForm() {
 
           <button className="login-submit" disabled={pending} type="submit">
             <LogIn size={22} />
-            <span>{pending ? 'Iniciando sesión…' : 'Entrar al administrador'}</span>
+            <span>{pending ? 'Iniciando sesión…' : 'Iniciar sesión'}</span>
             <ArrowRight size={25} />
           </button>
         </form>
