@@ -303,3 +303,28 @@ export async function deleteStockRecord(id: string): Promise<{ ok: boolean; data
       : { ok: false, error: error instanceof Error ? error.message : 'No se pudo eliminar el insumo.' };
   }
 }
+
+/** Elimina la cuenta de autenticación y el perfil solo cuando no hay registros históricos asociados. */
+export async function deleteSystemUser(id: string): Promise<{ ok: boolean; data?: Data; error?: string }> {
+  try {
+    if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('Selecciona un usuario válido.');
+    }
+    const { db, user } = await requireAdmin();
+    const { error } = await db.rpc('eliminar_usuario_sistema', { p_usuario: id });
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') {
+        throw new Error('Falta habilitar la eliminación segura de usuarios. Ejecuta database/18_eliminar_usuario.sql en Supabase.');
+      }
+      if (error.code === '23503' || error.message?.includes('usuario_con_historial')) {
+        throw new Error('No se puede eliminar esta cuenta porque tiene asistencias, ventas u otros registros asociados. Desactívala para conservar el historial.');
+      }
+      if (error.message?.includes('usuario_propio')) throw new Error('No puedes eliminar la cuenta con la que iniciaste sesión.');
+      throw new Error(friendly(error));
+    }
+    try { return { ok: true, data: await readData(db, user.id) }; }
+    catch { return { ok: true, error: 'Cuenta eliminada. Actualiza los datos para refrescar la lista.' }; }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'No se pudo eliminar el usuario.' };
+  }
+}

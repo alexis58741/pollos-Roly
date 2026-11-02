@@ -1,8 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownToLine, Check, Pencil, Plus, Printer, Search, X } from 'lucide-react';
-import { BeverageStock, Data, localDate, Purchase, Shift, StaffPayment } from '../lib/data';
+import { ArrowDownToLine, Check, Pencil, Plus, Printer, Search, Trash2, X } from 'lucide-react';
+import { BeverageStock, Data, localDate, Purchase, Shift, StaffPayment, SystemUser } from '../lib/data';
 import { cashSummary, csvDownload, paymentTotal } from '../lib/business';
 import { matchesPeriod } from '../lib/admin-selectors';
 import PurchaseEditor from './PurchaseEditor';
@@ -11,7 +11,7 @@ import StaffPaymentEditor from './StaffPaymentEditor';
 import { groupPurchases, purchaseTotal } from '../lib/purchases';
 import type { Mutation } from '../lib/supabase/operations';
 
-type Props = { section: string; data: Data; saving: boolean; update: (next: Data, message: string) => Promise<boolean>; mutate: (operation: Mutation, message: string) => Promise<boolean>; refresh: () => Promise<void>; notify: (message: string) => void; mutationError: string; clearMutationError: () => void; createUser: (values: {name:string;surname:string;phone:string;email:string;password:string;role:string;branch:string}) => Promise<{ok:boolean;error?:string;message?:string}> };
+type Props = { section: string; data: Data; saving: boolean; update: (next: Data, message: string) => Promise<boolean>; mutate: (operation: Mutation, message: string) => Promise<boolean>; refresh: () => Promise<void>; notify: (message: string) => void; mutationError: string; clearMutationError: () => void; createUser: (values: {name:string;surname:string;phone:string;email:string;password:string;role:string;branch:string}) => Promise<{ok:boolean;error?:string;message?:string}>; deleteUser: (id: string) => Promise<{ok:boolean;error?:string}> };
 type Collection = 'suppliers' | 'notices' | 'users' | 'staffPayments' | 'finances' | 'snackStocks' | 'beverageStocks' | 'purchases' | 'shifts' | 'cashMovements' | 'closeShift';
 type Field = { key: string; label: string; type?: string; options?: { value: string; label: string }[]; required?: boolean; value?: string | number; min?: number; max?: number; step?: number };
 type Editor = { collection: Collection; id?: string; values: Record<string, string | number | boolean | null>; title: string };
@@ -21,7 +21,7 @@ const methods = options(['Efectivo', 'QR', 'Tarjeta']);
 const labels: Record<string, string> = { proveedores: 'proveedor', comunicados: 'aviso', empleados: 'usuario', 'pagos-personal': 'pago', 'finanzas-personales': 'movimiento', snacks: 'existencia', bebidas: 'stock de bebidas', compras: 'compra' };
 const collections: Record<string, Collection> = { proveedores: 'suppliers', comunicados: 'notices', empleados: 'users', 'pagos-personal': 'staffPayments', 'finanzas-personales': 'finances', snacks: 'snackStocks', bebidas: 'beverageStocks', compras: 'purchases' };
 
-export default function AdminModules({ section, data, saving, update, mutate, notify, refresh, mutationError, clearMutationError, createUser }: Props) {
+export default function AdminModules({ section, data, saving, update, mutate, notify, refresh, mutationError, clearMutationError, createUser, deleteUser }: Props) {
   const [query, setQuery] = useState('');
   const [branch, setBranch] = useState('all');
   const [from, setFrom] = useState('');
@@ -33,6 +33,9 @@ export default function AdminModules({ section, data, saving, update, mutate, no
   const [createUserOpen, setCreateUserOpen] = useState(false);
   const [createUserBusy, setCreateUserBusy] = useState(false);
   const [createUserError, setCreateUserError] = useState('');
+  const [userToDelete, setUserToDelete] = useState<SystemUser | null>(null);
+  const [deleteUserBusy, setDeleteUserBusy] = useState(false);
+  const [deleteUserError, setDeleteUserError] = useState('');
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (editor) dialog.current?.showModal(); else dialog.current?.close(); }, [editor]);
   const branchOptions = data.branches.map(b => ({ value: b.id, label: b.name }));
@@ -123,6 +126,19 @@ export default function AdminModules({ section, data, saving, update, mutate, no
     if (ok) setEditor(null);
     return ok;
   }
+  async function confirmDeleteUser() {
+    if (!userToDelete || deleteUserBusy) return;
+    setDeleteUserBusy(true); setDeleteUserError('');
+    try {
+      const result = await deleteUser(userToDelete.id);
+      if (!result.ok) { setDeleteUserError(result.error || 'No se pudo eliminar la cuenta.'); return; }
+      setUserToDelete(null);
+      await refresh();
+      notify(`Cuenta de ${userToDelete.name} eliminada.`);
+    } catch (error) {
+      setDeleteUserError(error instanceof Error ? error.message : 'No se pudo eliminar la cuenta.');
+    } finally { setDeleteUserBusy(false); }
+  }
   type Row = { id: string; cells: React.ReactNode[]; raw: (string | number)[]; record?: object; editable?: boolean };
   let headers: string[] = [];
   let rows: Row[] = [];
@@ -171,7 +187,7 @@ export default function AdminModules({ section, data, saving, update, mutate, no
     return { id: shift.id, cells: [data.users.find(user => user.id === shift.cashier)?.name || data.profile.name || 'Cajero', branchName(shift.branch), shiftOrders.length, money(shiftOrders.reduce((sum, order) => sum + order.total, 0)), money(summary.cashSales), money(summary.expected), summary.difference === null ? 'Abierto' : money(summary.difference)], raw: [] };
   });
   function table(h: string[], r: Row[], actions = true) {
-    return <div className="table-scroll"><table><thead><tr>{h.map(c => <th key={c}>{c}</th>)}{actions && <th>Acciones</th>}</tr></thead><tbody>{r.map(row => <tr key={row.id}>{row.cells.map((c, i) => <td key={i}>{c}</td>)}{actions && <td>{row.editable !== false && <button className="edit-button" aria-label={`Editar ${row.raw[0]}`} onClick={() => open(collections[section], `Editar ${labels[section]}`, row.record, row.id)}><Pencil size={14} />Editar</button>}{section === 'compras' && (row.record as Purchase).status === 'Registrada' && <button className="edit-button" onClick={() => setConfirmId(row.id)}>Anular</button>}</td>}</tr>)}</tbody></table>{!r.length && <div className="empty-state">Aún no hay registros. Agrega el primero o revisa los filtros.</div>}</div>;
+    return <div className="table-scroll"><table><thead><tr>{h.map(c => <th key={c}>{c}</th>)}{actions && <th>Acciones</th>}</tr></thead><tbody>{r.map(row => <tr key={row.id}>{row.cells.map((c, i) => <td key={i}>{c}</td>)}{actions && <td>{row.editable !== false && <span className={section === 'empleados' ? 'user-row-actions' : undefined}><button className="edit-button" aria-label={`Editar ${row.raw[0]}`} onClick={() => open(collections[section], `Editar ${labels[section]}`, row.record, row.id)}><Pencil size={14} />Editar</button>{section === 'empleados' && row.id !== data.currentUserId && <button className="icon-button danger-icon" aria-label={`Eliminar cuenta de ${(row.record as SystemUser).name}`} title="Eliminar cuenta" onClick={() => { setDeleteUserError(''); setUserToDelete(row.record as SystemUser); }}><Trash2 size={16} /></button>}</span>}{section === 'compras' && (row.record as Purchase).status === 'Registrada' && <button className="edit-button" onClick={() => setConfirmId(row.id)}>Anular</button>}</td>}</tr>)}</tbody></table>{!r.length && <div className="empty-state">Aún no hay registros. Agrega el primero o revisa los filtros.</div>}</div>;
   }
   return <>
     {section !== 'perfil' && <div className="module-toolbar"><div className="search-field"><Search size={16} /><input aria-label="Buscar en este apartado" placeholder="Buscar…" value={query} onChange={e => setQuery(e.target.value)} /></div>{!['proveedores'].includes(section) && <label className="compact-label">Sucursal<select aria-label="Sucursal del apartado" value={branch} onChange={e => setBranch(e.target.value)}><option value="all">Todas las sucursales</option>{branchOptions.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}</select></label>}{dateSections.includes(section) && <><label className="compact-label">Desde<input type="date" aria-label="Desde" value={from} max={to || undefined} onChange={e => setFrom(e.target.value)} onInput={e => setFrom(e.currentTarget.value)} /></label><label className="compact-label">Hasta<input type="date" aria-label="Hasta" value={to} min={from || undefined} onChange={e => setTo(e.target.value)} onInput={e => setTo(e.currentTarget.value)} /></label></>}{collections[section] && section !== 'empleados' && <button className="button primary" onClick={() => open(collections[section], section === 'compras' ? 'Registrar nueva compra' : `Agregar ${labels[section]}`)}><Plus size={16} />{section === 'compras' ? 'Registrar compra' : `Agregar ${labels[section]}`}</button>}{section === 'empleados' && <><button className="button primary" onClick={() => { setCreateUserError(''); setCreateUserOpen(true); }}> <Plus size={16}/>Nuevo usuario</button><button className="button" onClick={refresh}>Actualizar usuarios</button></>}{section === 'reportes' ? <button className="button primary" disabled={invalidRange} onClick={() => window.print()}><Printer size={16} />Imprimir reporte</button> : rows.length > 0 && <button className="button" disabled={invalidRange} onClick={exportRows}><ArrowDownToLine size={16} />Exportar</button>}</div>}
@@ -183,6 +199,7 @@ export default function AdminModules({ section, data, saving, update, mutate, no
     {section === 'pagos-personal' && <div className="info-note">Los pagos pendientes pueden editarse. Los pagos marcados como Pagado quedan como comprobantes de consulta y se incluyen en Reportes.</div>}
     {collections[section] && section !== 'comunicados' && <section className="panel">{table(headers, rows)}</section>}
     {confirmId && <div className="confirm-bar" role="alert"><span>¿Anular esta compra completa y descontar del inventario todos los insumos recibidos?</span><button className="button" onClick={() => setConfirmId(null)}>Volver</button><button className="button primary" onClick={async () => { try { if (await mutate({ collection: 'purchases', create: false, record: { id: confirmId, status: 'Anulada' } }, 'Compra anulada y stock actualizado')) setConfirmId(null); } catch (e) { notify((e as Error).message); } }}>Confirmar anulación</button></div>}
+    {section === 'empleados' && userToDelete && <div className="confirm-bar" role="alert"><span><strong>¿Eliminar la cuenta de {userToDelete.name}?</strong> La cuenta de acceso se eliminará si no tiene actividad vinculada.</span>{deleteUserError && <p className="error-banner user-delete-error" role="alert">{deleteUserError}</p>}<button className="button" disabled={deleteUserBusy} onClick={() => { setUserToDelete(null); setDeleteUserError(''); }}>Cancelar</button><button className="button danger-button" disabled={deleteUserBusy} onClick={confirmDeleteUser}>{deleteUserBusy ? 'Eliminando…' : 'Confirmar eliminación'}</button></div>}
     {section === 'comunicados' && <div className="notices-grid">{data.notices.filter(scoped).filter(n => `${n.title} ${n.body}`.toLowerCase().includes(query.toLowerCase())).map(n => <article className="panel notice-card" key={n.id}><div><span className={`badge ${n.priority === 'Urgente' ? 'warning' : 'success'}`}>{n.priority} · {n.active ? 'Publicado' : 'Archivado'}</span><button className="icon-button" aria-label={`Editar aviso ${n.title}`} onClick={() => open('notices', 'Editar aviso', n, n.id)}><Pencil size={16} /></button></div><h2>{n.title}</h2><p>{n.body}</p><small>{branchName(n.branch)} · {n.date}</small><button className="button" onClick={() => update({ ...data, notices: data.notices.map(item => item.id === n.id ? { ...item, active: !item.active } : item) }, n.active ? 'Aviso archivado' : 'Aviso publicado')}>{n.active ? 'Archivar' : 'Publicar'}</button></article>)}{!data.notices.length && <div className="empty-state">Todavía no tienes avisos. Publica el primero para tu equipo.</div>}</div>}
     {section === 'reportes' && <div className="report-print-area">
       <header className="report-print-heading"><p>POLLOS ROLY · ADMINISTRACIÓN</p><h1>{data.settings.name || 'Pollos Roly'}</h1><span>Reporte operativo · Período: {from || 'Inicio'} — {to || 'Sin fecha límite'} · Sucursal: {branchName(branch)}</span>{(data.settings.address || data.settings.phone) && <small>{[data.settings.address, data.settings.phone].filter(Boolean).join(' · ')}</small>}<small>Generado: {new Date().toLocaleString('es-BO', { timeZone: 'America/La_Paz' })}</small></header>
