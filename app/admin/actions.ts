@@ -275,3 +275,31 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
     catch { return { ok: true, warning: 'Guardado en Supabase. No se pudo refrescar la pantalla; pulsa Actualizar datos. No repitas el registro.' }; }
   } catch (error) { return { ok: committed, error: error instanceof Error ? error.message : 'No se pudo guardar en Supabase.' }; }
 }
+
+/** Elimina físicamente un insumo solo si no forma parte del historial de compras. */
+export async function deleteStockRecord(id: string): Promise<{ ok: boolean; data?: Data; error?: string }> {
+  let deleted = false;
+  try {
+    if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('Selecciona un insumo válido.');
+    }
+    const { db, user } = await requireAdmin();
+    const { error } = await db.rpc('eliminar_insumo', { p_insumo: id });
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') {
+        throw new Error('Falta habilitar la eliminación segura de insumos. Ejecuta database/17_eliminar_insumo.sql en Supabase.');
+      }
+      if (error.code === '23503' || error.message?.includes('insumo_con_compras')) {
+        throw new Error('No se puede eliminar este insumo porque aparece en compras registradas. Puedes editarlo para corregir sus datos y conservar el historial.');
+      }
+      throw new Error(friendly(error));
+    }
+    deleted = true;
+    try { return { ok: true, data: await readData(db, user.id) }; }
+    catch { return { ok: true, error: 'Insumo eliminado en Supabase. Actualiza los datos para refrescar la lista.' }; }
+  } catch (error) {
+    return deleted
+      ? { ok: true, error: 'Insumo eliminado en Supabase. Actualiza los datos para refrescar la lista.' }
+      : { ok: false, error: error instanceof Error ? error.message : 'No se pudo eliminar el insumo.' };
+  }
+}

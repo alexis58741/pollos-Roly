@@ -53,7 +53,7 @@ La aplicación usa `supabase.rpc(...)` para estas operaciones:
 | `cambiar_estado_pedido` | Cancela devolviendo snacks una vez; protege cajas cerradas. |
 | `actualizar_mi_perfil` | Edita datos de contacto sin elegir rol ni activarse. |
 
-Compras, caja y pedidos no admiten escrituras directas desde el cliente. Los pagos realizados al personal son inmutables; finanzas admite solo alta y consulta. No hay borrado físico desde la aplicación. Las correcciones de movimientos ya contabilizados requieren registrar su contrapartida.
+Compras, caja y pedidos no admiten escrituras directas desde el cliente. Los pagos realizados al personal son inmutables; finanzas admite solo alta y consulta. El inventario permite eliminar insumos únicamente cuando no están vinculados a compras; el historial de compras impide borrar los demás. Las correcciones de movimientos ya contabilizados requieren registrar su contrapartida.
 
 Los usuarios nuevos reciben un perfil **inactivo** con rol Cajero. Los roles enviados en metadata no otorgan privilegios. Solo Administrador activo gestiona el negocio en esta etapa; Supervisor y Cajero quedan sin acceso operativo hasta implementar sus módulos.
 
@@ -109,3 +109,5 @@ Para pedir platos de pollo con selección por porción, ejecuta `14_personalizac
 Para administrar bebidas por sucursal, ejecuta `15_inventario_bebidas.sql` después de 11, 12, 13 y 14. Aparecerá el apartado **Bebidas** en el administrador. Cada producto de la categoría Bebidas se muestra por sucursal, permite registrar unidades en freezer y almacén, y el POS muestra el total disponible. Las ventas descuentan primero del freezer y después del almacén; editar pedidos revierte el consumo anterior y las anulaciones restituyen las cantidades en su ubicación original.
 
 Para que cada nueva venta aparezca ya como completada en el historial del cajero, ejecuta `16_pedidos_completados.sql` en Supabase. La base conserva el estado interno `Entregado`, que el punto de venta presenta como **Completado**.
+
+Para habilitar el botón **Eliminar** del apartado Insumos, ejecuta `17_eliminar_insumo.sql` en Supabase. Solo un administrador puede eliminar un insumo sin compras relacionadas; los insumos usados en compras permanecen para proteger el historial.

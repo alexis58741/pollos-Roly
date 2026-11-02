@@ -304,3 +304,4 @@ img,video,canvas,svg{max-width:100%}
   .login-submit{gap:8px;padding:0 12px;font-size:13px}
   .login-security{font-size:11px}
 }
+.row-actions{display:flex;align-items:center;justify-content:flex-end;gap:5px}.danger-icon{color:#d94b42}.danger-icon:hover{background:#fff0ed;color:#b92d27}.danger-button{background:#c8322b;border-color:#c8322b;color:#fff}.danger-button:hover{background:#ad2924}.confirm-bar .error-banner{flex-basis:100%;margin:0;padding:10px 12px;font-size:11px}
