@@ -229,6 +229,8 @@
 .app-shell .attendance-exit-time { display: inline-flex; align-items: center; gap: 7px; color: #438b5a; font-weight: 650; }
 .app-shell .attendance-exit-time svg { color: #53a46a; }
 .app-shell .attendance-exit-pending { color: #a39b93; font-size: 10px; }
+  .app-shell .attendance-late,.app-shell .attendance-fine-amount { display:inline-flex; align-items:center; border:1px solid #ed1c2e35; border-radius:999px; padding:5px 8px; color:#ff8087; background:#ed1c2e15; font-size:10px; font-weight:650; white-space:nowrap; }
+  .app-shell .attendance-on-time { color:#62d181; font-size:10px; }
 .app-shell .staff-payment-modal { width: min(1480px, calc(100vw - 32px)); max-width: none; max-height: calc(100dvh - 28px); padding: 0; border-radius: 17px; }
 .app-shell .staff-payment-modal[open] { display: flex; flex-direction: column; }
 .app-shell .staff-payment-modal .modal-heading { flex: 0 0 auto; margin: 0; padding: 24px 29px 18px; border-bottom: 1px solid #eeece9; }
@@ -827,6 +829,19 @@
   .app-shell .attendance-general-footer>span { display:flex; align-items:center; gap:8px; color:#aab1bc; font-size:11px; }
   .app-shell .attendance-general-footer>span svg { color:#ff4a56; }
   .app-shell .attendance-time-success { border:1px solid #22c55e30; background:#142019; color:#73d991; }
+  .app-shell .attendance-fine-toolbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:22px; padding:15px; border:1px solid #ffffff14; border-radius:10px; background:#12161a; }
+  .app-shell .attendance-fine-toolbar>div { display:flex; flex-direction:column; gap:5px; }
+  .app-shell .attendance-fine-toolbar strong { color:#f3f4f6; font-size:12px; }
+  .app-shell .attendance-fine-toolbar small,.app-shell .attendance-fine-settings>small { color:#9ca3af; font-size:10px; line-height:1.5; }
+  .app-shell .attendance-fine-settings { display:flex; flex-direction:column; gap:8px; margin-top:12px; padding:15px; border:1px solid #ed1c2e33; border-radius:10px; background:#1a1416; }
+  .app-shell .attendance-fine-settings>label { color:#e4e6ea; font-size:11px; font-weight:650; }
+  .app-shell .attendance-fine-settings>.attendance-fine-enable { display:flex; align-items:center; gap:9px; }
+  .app-shell .attendance-fine-settings>.attendance-fine-enable input { width:16px; min-height:16px; margin:0; padding:0; accent-color:#ed1c2e; }
+  .app-shell .attendance-fine-settings>div { position:relative; display:flex; align-items:center; }
+  .app-shell .attendance-fine-settings>div>span { position:absolute; left:12px; color:#ff737b; font-size:12px; font-weight:700; }
+  .app-shell .attendance-fine-settings input { width:100%; min-height:42px; padding:10px 12px 10px 40px; border:1px solid #ffffff1b; border-radius:8px; color:#f5f6f8; background:#1b1f24; font:500 13px var(--font); color-scheme:dark; }
+  .app-shell .attendance-fine-settings input:focus { outline:none; border-color:#ed1c2e; box-shadow:0 0 0 3px #ed1c2e20; }
+  .app-shell .attendance-fine-settings input:disabled { opacity:.55; }
 
   .app-shell .module-toolbar .compact-label { color:#c4cad2; }
   .app-shell .module-toolbar .compact-label input,.app-shell .module-toolbar .compact-label select { border-color:#ffffff1b; color:#f3f4f6; background:#191d22; }
@@ -886,4 +901,13 @@
   .app-shell .confirm-bar { border-color:#7b392f; color:#f3d1c9; background:#2a1918; }
   .app-shell .form-footer { color:#c1c7d0; background:#171b20; }
   .app-shell .form-footer>span { color:#9ca5b1; }
+}
+
+@media screen and (max-width: 760px) {
+  .app-shell .attendance-general-form { padding:17px; }
+  .app-shell .attendance-general-fields { grid-template-columns:1fr; gap:13px; margin-top:19px; }
+  .app-shell .attendance-general-footer { align-items:stretch; flex-direction:column; }
+  .app-shell .attendance-general-footer .button { width:100%; justify-content:center; }
+  .app-shell .attendance-fine-toolbar { align-items:flex-start; flex-direction:column; }
+  .app-shell .attendance-fine-toolbar .button { width:100%; justify-content:center; }
 }

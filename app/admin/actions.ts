@@ -35,7 +35,7 @@ export async function loadAdminData(): Promise<{ data?: Data; error?: string }> 
   catch (error) { return { error: error instanceof Error ? error.message : 'No se pudieron cargar los datos.' }; }
 }
 
-export type AttendanceRecord = { id: string; employeeId: string; name: string; role: string; branch: string; timestamp: string; exitTimestamp: string | null };
+export type AttendanceRecord = { id: string; employeeId: string; name: string; role: string; branch: string; timestamp: string; exitTimestamp: string | null; lateMinutes: number; fineAmount: number };
 
 export async function loadAttendanceRecords(date: string): Promise<{ records?: AttendanceRecord[]; error?: string }> {
   try {
@@ -48,6 +48,12 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
       throw new Error(error.code === '42501' ? 'Supabase no permite consultar las asistencias desde el administrador. Revisa las políticas del script 06.' : error.message);
     }
     if (!entries?.length) return { records: [] };
+    const { data: fines, error: finesError } = await db.from('multas_asistencia').select('asistencia_id,monto,minutos_tarde').in('asistencia_id', entries.map(entry => entry.id));
+    if (finesError) {
+      if (finesError.code === '42P01' || finesError.code === 'PGRST205') throw new Error('Falta habilitar las multas automáticas. Ejecuta database/21_multas_asistencia.sql en Supabase.');
+      throw new Error(finesError.message);
+    }
+    const fineByAttendanceId = new Map((fines || []).map(fine => [fine.asistencia_id, fine]));
     const ids = [...new Set(entries.map(entry => entry.empleado_id))];
     const { data: profiles, error: profilesError } = await db.from('perfiles').select('id,nombre,apellido,rol,sucursal_id').in('id', ids);
     if (profilesError) throw new Error(profilesError.message);
@@ -62,6 +68,8 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
         branch: profile?.sucursal_id || '',
         timestamp: entry.registrada_en,
         exitTimestamp: entry.salida_en || null,
+        lateMinutes: fineByAttendanceId.get(entry.id)?.minutos_tarde || 0,
+        fineAmount: Number(fineByAttendanceId.get(entry.id)?.monto || 0),
       };
     }) };
   } catch (error) {
@@ -329,17 +337,17 @@ export async function deleteSystemUser(id: string): Promise<{ ok: boolean; data?
   }
 }
 
-export type AttendanceTimeSettings = { time: string; toleranceMinutes: number };
+export type AttendanceTimeSettings = { time: string; toleranceMinutes: number; fineAmount: number };
 
 export async function loadAttendanceTimeSettings(): Promise<{ settings?: AttendanceTimeSettings; error?: string }> {
   try {
     const { db } = await requireAdmin();
-    const { data, error } = await db.from('configuracion').select('hora_entrada_asistencia,tolerancia_asistencia_minutos').eq('id', 1).single();
+    const { data, error } = await db.from('configuracion').select('hora_entrada_asistencia,tolerancia_asistencia_minutos,monto_multa_asistencia').eq('id', 1).single();
     if (error) {
-      if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta habilitar el horario general. Ejecuta database/20_tiempo_asistencia_general.sql en Supabase.');
+      if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta habilitar la multa automática. Ejecuta database/21_multas_asistencia.sql en Supabase.');
       throw new Error(friendly(error));
     }
-    return { settings: { time: data.hora_entrada_asistencia ? String(data.hora_entrada_asistencia).slice(0, 5) : '', toleranceMinutes: data.tolerancia_asistencia_minutos ?? 0 } };
+    return { settings: { time: data.hora_entrada_asistencia ? String(data.hora_entrada_asistencia).slice(0, 5) : '', toleranceMinutes: data.tolerancia_asistencia_minutos ?? 0, fineAmount: Number(data.monto_multa_asistencia || 0) } };
   } catch (error) {
     return { error: error instanceof Error ? error.message : 'No se pudo cargar el horario general.' };
   }
@@ -349,10 +357,11 @@ export async function saveAttendanceTimeSettings(input: AttendanceTimeSettings):
   try {
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time)) throw new Error('Indica una hora válida.');
     if (!Number.isInteger(input.toleranceMinutes) || input.toleranceMinutes < 0 || input.toleranceMinutes > 180) throw new Error('La tolerancia debe estar entre 0 y 180 minutos.');
+    if (!Number.isFinite(input.fineAmount) || input.fineAmount < 0 || input.fineAmount > 1000000 || Math.round(input.fineAmount * 100) !== input.fineAmount * 100) throw new Error('Indica un monto de multa válido, hasta dos decimales.');
     const { db } = await requireAdmin();
-    const { error } = await db.from('configuracion').update({ hora_entrada_asistencia: `${input.time}:00`, tolerancia_asistencia_minutos: input.toleranceMinutes }).eq('id', 1).select('id').single();
+    const { error } = await db.from('configuracion').update({ hora_entrada_asistencia: `${input.time}:00`, tolerancia_asistencia_minutos: input.toleranceMinutes, monto_multa_asistencia: input.fineAmount }).eq('id', 1).select('id').single();
     if (error) {
-      if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta habilitar el horario general. Ejecuta database/20_tiempo_asistencia_general.sql en Supabase.');
+      if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta habilitar la multa automática. Ejecuta database/21_multas_asistencia.sql en Supabase.');
       throw new Error(friendly(error));
     }
     return { ok: true };

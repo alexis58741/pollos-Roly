@@ -115,3 +115,5 @@ Para habilitar el botón **Eliminar** del apartado Insumos, ejecuta `17_eliminar
 Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar_usuario.sql` en Supabase. No permite eliminar la sesión propia ni cuentas vinculadas a asistencias, ventas, turnos, compras o pagos; en esos casos desactiva la cuenta para preservar el historial.
 
 Para configurar una hora de entrada y una tolerancia generales para todos los empleados, ejecuta `20_tiempo_asistencia_general.sql` en Supabase. El apartado **Tiempo asistencia** guarda un único horario global para el personal activo, incluidos cajeros y cocineros.
+
+Para activar multas automáticas por tardanza, ejecuta `21_multas_asistencia.sql` después de la migración 20 y de la migración 06 de asistencia. Define el monto desde **Tiempo asistencia**; cada marcación posterior a la hora de entrada más la tolerancia crea una multa pendiente y muestra los minutos tarde en **Asistencia**. Con multa desactivada, el sistema registra los minutos tarde sin crear un monto a cobrar.
