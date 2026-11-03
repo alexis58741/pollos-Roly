@@ -113,3 +113,5 @@ Para que cada nueva venta aparezca ya como completada en el historial del cajero
 Para habilitar el botón **Eliminar** del apartado Insumos, ejecuta `17_eliminar_insumo.sql` en Supabase. Solo un administrador puede eliminar un insumo sin compras relacionadas; los insumos usados en compras permanecen para proteger el historial.
 
 Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar_usuario.sql` en Supabase. No permite eliminar la sesión propia ni cuentas vinculadas a asistencias, ventas, turnos, compras o pagos; en esos casos desactiva la cuenta para preservar el historial.
+
+Para configurar la hora esperada de entrada y los minutos de tolerancia por empleado, ejecuta `19_tiempo_asistencia.sql` en Supabase. El nuevo apartado **Tiempo asistencia** guarda estos horarios como referencia administrativa.
