@@ -329,37 +329,34 @@ export async function deleteSystemUser(id: string): Promise<{ ok: boolean; data?
   }
 }
 
-export type AttendanceSchedule = { employeeId: string; time: string; toleranceMinutes: number; updatedAt: string };
+export type AttendanceTimeSettings = { time: string; toleranceMinutes: number };
 
-export async function loadAttendanceSchedules(): Promise<{ schedules?: AttendanceSchedule[]; error?: string }> {
+export async function loadAttendanceTimeSettings(): Promise<{ settings?: AttendanceTimeSettings; error?: string }> {
   try {
     const { db } = await requireAdmin();
-    const { data, error } = await db.from('horarios_asistencia').select('empleado_id,hora_entrada,tolerancia_minutos,updated_at');
+    const { data, error } = await db.from('configuracion').select('hora_entrada_asistencia,tolerancia_asistencia_minutos').eq('id', 1).single();
     if (error) {
-      if (error.code === '42P01' || error.code === 'PGRST205') throw new Error('Falta configurar este apartado. Ejecuta database/19_tiempo_asistencia.sql en Supabase.');
+      if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta habilitar el horario general. Ejecuta database/20_tiempo_asistencia_general.sql en Supabase.');
       throw new Error(friendly(error));
     }
-    return { schedules: (data || []).map(row => ({ employeeId: row.empleado_id, time: String(row.hora_entrada).slice(0, 5), toleranceMinutes: row.tolerancia_minutos, updatedAt: row.updated_at })) };
+    return { settings: { time: data.hora_entrada_asistencia ? String(data.hora_entrada_asistencia).slice(0, 5) : '', toleranceMinutes: data.tolerancia_asistencia_minutos ?? 0 } };
   } catch (error) {
-    return { error: error instanceof Error ? error.message : 'No se pudieron cargar los horarios.' };
+    return { error: error instanceof Error ? error.message : 'No se pudo cargar el horario general.' };
   }
 }
 
-export async function saveAttendanceSchedule(input: { employeeId: string; time: string; toleranceMinutes: number }): Promise<{ ok: boolean; error?: string }> {
+export async function saveAttendanceTimeSettings(input: AttendanceTimeSettings): Promise<{ ok: boolean; error?: string }> {
   try {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input.employeeId)) throw new Error('Selecciona un empleado válido.');
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time)) throw new Error('Indica una hora válida.');
     if (!Number.isInteger(input.toleranceMinutes) || input.toleranceMinutes < 0 || input.toleranceMinutes > 180) throw new Error('La tolerancia debe estar entre 0 y 180 minutos.');
     const { db } = await requireAdmin();
-    const { data: employee, error: employeeError } = await db.from('perfiles').select('rol,activo').eq('id', input.employeeId).maybeSingle();
-    if (employeeError || !employee || !employee.activo || employee.rol === 'Administrador') throw new Error('El empleado debe estar activo y tener un rol operativo.');
-    const { error } = await db.from('horarios_asistencia').upsert({ empleado_id: input.employeeId, hora_entrada: `${input.time}:00`, tolerancia_minutos: input.toleranceMinutes, updated_at: new Date().toISOString() }, { onConflict: 'empleado_id' });
+    const { error } = await db.from('configuracion').update({ hora_entrada_asistencia: `${input.time}:00`, tolerancia_asistencia_minutos: input.toleranceMinutes }).eq('id', 1).select('id').single();
     if (error) {
-      if (error.code === '42P01' || error.code === 'PGRST205') throw new Error('Falta configurar este apartado. Ejecuta database/19_tiempo_asistencia.sql en Supabase.');
+      if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta habilitar el horario general. Ejecuta database/20_tiempo_asistencia_general.sql en Supabase.');
       throw new Error(friendly(error));
     }
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: error instanceof Error ? error.message : 'No se pudo guardar el horario.' };
+    return { ok: false, error: error instanceof Error ? error.message : 'No se pudo guardar el horario general.' };
   }
 }

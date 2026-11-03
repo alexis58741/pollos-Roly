@@ -114,4 +114,4 @@ Para habilitar el botón **Eliminar** del apartado Insumos, ejecuta `17_eliminar
 
 Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar_usuario.sql` en Supabase. No permite eliminar la sesión propia ni cuentas vinculadas a asistencias, ventas, turnos, compras o pagos; en esos casos desactiva la cuenta para preservar el historial.
 
-Para configurar la hora esperada de entrada y los minutos de tolerancia por empleado, ejecuta `19_tiempo_asistencia.sql` en Supabase. El nuevo apartado **Tiempo asistencia** guarda estos horarios como referencia administrativa.
+Para configurar una hora de entrada y una tolerancia generales para todos los empleados, ejecuta `20_tiempo_asistencia_general.sql` en Supabase. El apartado **Tiempo asistencia** guarda un único horario global para el personal activo, incluidos cajeros y cocineros.

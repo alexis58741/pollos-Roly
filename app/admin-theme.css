@@ -795,6 +795,13 @@
   }
 }
 
+@media screen and (max-width: 760px) {
+  .app-shell .attendance-general-form { padding:17px; }
+  .app-shell .attendance-general-fields { grid-template-columns:1fr; gap:13px; margin-top:19px; }
+  .app-shell .attendance-general-footer { align-items:stretch; flex-direction:column; }
+  .app-shell .attendance-general-footer .button { width:100%; justify-content:center; }
+}
+
 @media screen {
   /* Readable dark surfaces for every admin module, including rules in globals.css. */
   .app-shell .attendance-admin-toolbar { border-color:#ffffff14; background:#15191e; }
@@ -803,6 +810,23 @@
   .app-shell .attendance-admin-search { border-color:#ffffff1a; background:#1b1f24; }
   .app-shell .attendance-admin-search input { color:#f1f3f5; }
   .app-shell .attendance-admin-search input::placeholder { color:#9ca3af; }
+
+  .app-shell .attendance-general-form { padding:22px; border:1px solid #ffffff14; background:linear-gradient(145deg,#15191e,#111418); }
+  .app-shell .attendance-general-heading { display:flex; align-items:center; gap:12px; }
+  .app-shell .attendance-general-icon { width:44px; height:44px; display:grid; place-items:center; flex:none; border:1px solid #ed1c2e40; border-radius:12px; color:#ff4a56; background:#ed1c2e18; }
+  .app-shell .attendance-general-heading h2 { margin:0; color:#f5f6f8; font-size:16px; }
+  .app-shell .attendance-general-heading p { margin:4px 0 0; color:#9ca3af; font-size:11px; }
+  .app-shell .attendance-general-heading .badge { margin-left:auto; }
+  .app-shell .attendance-general-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; margin-top:24px; }
+  .app-shell .attendance-general-fields label { display:flex; flex-direction:column; gap:8px; color:#d6d9df; font-size:11px; font-weight:650; }
+  .app-shell .attendance-general-fields input { width:100%; min-height:44px; padding:10px 12px; border:1px solid #ffffff1a; border-radius:8px; outline:none; color:#f5f6f8; background:#1b1f24; font:500 13px var(--font); color-scheme:dark; }
+  .app-shell .attendance-general-fields input:focus { border-color:#ed1c2e; box-shadow:0 0 0 3px #ed1c2e20; }
+  .app-shell .attendance-general-fields input:disabled { opacity:.6; }
+  .app-shell .attendance-general-fields small { color:#9ca3af; font-size:10px; font-weight:400; }
+  .app-shell .attendance-general-footer { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:24px; padding-top:18px; border-top:1px solid #ffffff12; }
+  .app-shell .attendance-general-footer>span { display:flex; align-items:center; gap:8px; color:#aab1bc; font-size:11px; }
+  .app-shell .attendance-general-footer>span svg { color:#ff4a56; }
+  .app-shell .attendance-time-success { border:1px solid #22c55e30; background:#142019; color:#73d991; }
 
   .app-shell .module-toolbar .compact-label { color:#c4cad2; }
   .app-shell .module-toolbar .compact-label input,.app-shell .module-toolbar .compact-label select { border-color:#ffffff1b; color:#f3f4f6; background:#191d22; }
