@@ -20,7 +20,7 @@ export async function signIn(_previous: { error: string }, form: FormData) {
     if (profile.rol === 'Administrador') {
       destination = '/admin/dashboard';
     } else if (profile.rol === 'Cajero') {
-      destination = '/cajero';
+      destination = '/asistencia';
     } else if (['Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'].includes(profile.rol)) {
       destination = '/asistencia';
     } else {

@@ -1,6 +1,7 @@
 import 'server-only';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { localDate } from '../data';
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -34,5 +35,8 @@ export async function requireCashier() {
   if (error || !user) throw new Error('Tu sesión terminó. Vuelve a iniciar sesión.');
   const { data: profile, error: profileError } = await db.from('perfiles').select('id,nombre,apellido,rol,activo,sucursal_id').eq('id', user.id).single();
   if (profileError || !profile?.activo || profile.rol !== 'Cajero' || !profile.sucursal_id) throw new Error('Esta cuenta no tiene un perfil de cajero activo con sucursal asignada.');
+  const { data: attendance, error: attendanceError } = await db.from('asistencias').select('id').eq('empleado_id', user.id).eq('fecha', localDate()).maybeSingle();
+  if (attendanceError) throw new Error('No se pudo validar tu asistencia. Comprueba que estén configuradas las migraciones de asistencia 06 y 07 en Supabase.');
+  if (!attendance) throw new Error('Marca tu asistencia con reconocimiento facial antes de abrir la caja.');
   return { db, user, profile };
 }

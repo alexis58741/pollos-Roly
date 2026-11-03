@@ -7,6 +7,6 @@ export default async function Home() {
   const { data: profile } = await db.from('perfiles').select('rol,activo').eq('id', user.id).maybeSingle();
   if (!profile?.activo) redirect('/login');
   if (profile.rol === 'Administrador') redirect('/admin/dashboard');
-  if (profile.rol === 'Cajero') redirect('/cajero');
+  if (profile.rol === 'Cajero') redirect('/asistencia');
   redirect('/asistencia');
 }

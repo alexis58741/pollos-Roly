@@ -3,7 +3,7 @@
 import { createClient } from '../../lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-const ATTENDANCE_ROLES = ['Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'];
+const ATTENDANCE_ROLES = ['Cajero', 'Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'];
 const EMBEDDING_SIZE = 1024;
 const MATCH_THRESHOLD = 0.5;
 
@@ -50,5 +50,6 @@ export async function markAttendance(form: FormData): Promise<{ error?: string; 
   if (insertError) return { error: insertError.code === '23505' ? 'La asistencia de hoy ya está registrada.' : 'No se pudo registrar la asistencia. Verifica que ejecutaste database/07_asistencia_biometrica.sql.' };
 
   revalidatePath('/asistencia');
+  revalidatePath('/cajero');
   return { success: true, enrolled };
 }

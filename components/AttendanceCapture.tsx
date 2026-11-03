@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { Camera, Check, CircleAlert, Clock3, LoaderCircle, LogOut, UserRound } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { signOut } from '../app/auth/actions';
 import { markAttendance } from '../app/asistencia/actions';
 
@@ -46,6 +47,7 @@ function loadHumanLibrary(): Promise<new (config: object) => HumanInstance> {
 }
 
 export default function AttendanceCapture({ name, role, registeredAt, hasTemplate: initialTemplate, setupMissing }: { name: string; role: string; registeredAt: string | null; hasTemplate: boolean; setupMissing: boolean }) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const humanRef = useRef<HumanInstance | null>(null);
@@ -193,6 +195,7 @@ export default function AttendanceCapture({ name, role, registeredAt, hasTemplat
           setEnrolled(Boolean(response.enrolled));
           setHasTemplate(true);
           setMessage('');
+          if (role === 'Cajero') router.replace('/cajero');
         }
       });
     } catch {
@@ -219,7 +222,7 @@ export default function AttendanceCapture({ name, role, registeredAt, hasTemplat
           <button className="button primary" onClick={startCamera} disabled={setupMissing || (!hasTemplate && !consent)}><Camera size={17}/> {hasTemplate ? 'Verificar y marcar asistencia' : 'Registrar rostro y asistencia'}</button>
         </div>}
       </>}
-      {saved && <p className="attendance-saved-time"><Clock3 size={15}/> Registro completado hoy · {registeredLabel || 'hora local'}</p>}
+      {saved && <p className="attendance-saved-time"><Clock3 size={15}/> Registro completado hoy · {registeredLabel || 'hora local'}{role === 'Cajero' ? ' · Abriendo caja…' : ''}</p>}
       <p className="attendance-privacy">Se guarda una plantilla numérica de tu rostro con acceso restringido a tu cuenta. No se guarda una foto por cada asistencia; la plantilla solo se usa para compararla al registrar tu entrada.</p>
     </section>
   </main>;
