@@ -95,7 +95,7 @@ export default function AdminModules({ section, data, saving, update, mutate, no
         if (values.type === 'Egreso' && Number(values.amount) > cashSummary(data, shift).expected) throw new Error('El egreso supera el efectivo disponible.');
         next = { ...data, cashMovements: [{ ...row, shift: shift.id, date: new Date().toISOString() } as Data['cashMovements'][number], ...data.cashMovements] };
       } else if (editor.collection === 'shifts') {
-        if (data.shifts.some(s => s.branch === values.branch && s.cashier === data.profile.id && !s.closedAt)) throw new Error('Ya tienes un turno abierto en esta sucursal. Ciérralo antes de abrir otro.');
+        if (data.shifts.some(s => s.branch === values.branch && s.cashier === data.currentUserId && !s.closedAt)) throw new Error('Ya tienes un turno abierto en esta sucursal. Ciérralo antes de abrir otro.');
         next = { ...data, shifts: [{ ...row, openedAt: new Date().toISOString(), closedAt: null, counted: null } as Shift, ...data.shifts] };
       } else {
         if (editor.collection === 'users' && data.users.some(u => u.id !== id && u.email.toLowerCase() === String(values.email).toLowerCase())) throw new Error('Ya existe un usuario con ese correo.');
