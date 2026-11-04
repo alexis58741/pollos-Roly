@@ -33,7 +33,7 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
       db.from('configuracion').select('nombre').eq('id', 1).maybeSingle(),
       db.from('categorias').select('id,nombre,activa').eq('activa', true),
       db.from('productos').select('id,nombre,categoria_id,precio,precio_oferta,en_oferta,foto_path,orden,activo,requiere_seleccion,tipo_presas').eq('activo', true).order('orden').order('nombre'),
-      db.from('turnos_caja').select('id,fondo_inicial,apertura,observaciones').eq('sucursal_id', profile.sucursal_id).is('cierre', null).maybeSingle(),
+      db.from('turnos_caja').select('id,fondo_inicial,apertura,observaciones').eq('sucursal_id', profile.sucursal_id).eq('cajero_id', user.id).is('cierre', null).maybeSingle(),
     ]);
     for (const result of [branchResult, settingResult, categoryResult, productResult, shiftResult]) if (result.error) throw new Error(message(result.error, 'No se pudieron cargar los datos del cajero.'));
     if (!profile.sucursal_id) throw new Error('Tu usuario cajero no tiene una sucursal asignada. Pide al administrador que la asigne desde Usuarios del Sistema.');

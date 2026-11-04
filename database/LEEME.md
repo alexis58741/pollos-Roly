@@ -46,7 +46,7 @@ La aplicación usa `supabase.rpc(...)` para estas operaciones:
 |---|---|
 | `registrar_compra` | Compra de un insumo y aumento de stock atómicos. |
 | `anular_compra` | Revierte una sola vez si hay existencias suficientes. |
-| `abrir_turno` | Abre caja para el usuario autenticado; un turno abierto por sucursal. |
+| `abrir_turno` | Abre caja para el usuario autenticado; cada cajero puede tener un turno abierto por sucursal. |
 | `registrar_movimiento_caja` | Ingreso/retiro de un turno abierto sin sobregirar efectivo. |
 | `cerrar_turno` | Guarda esperado, contado, diferencia y cierre. |
 | `registrar_pedido` | Preparación para POS: precios del servidor, pagos mixtos y descuento de snacks. |

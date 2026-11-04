@@ -97,7 +97,7 @@ create table if not exists public.turnos_caja (
   observaciones text not null default '', check(cierre is null or cierre >= apertura),
   check ((cierre is null and efectivo_contado is null and efectivo_esperado is null) or (cierre is not null and efectivo_contado is not null and efectivo_esperado is not null))
 );
-create unique index if not exists un_turno_abierto_por_sucursal on public.turnos_caja(sucursal_id) where cierre is null;
+create unique index if not exists un_turno_abierto_por_cajero_sucursal on public.turnos_caja(sucursal_id,cajero_id) where cierre is null;
 create table if not exists public.movimientos_caja (
   id uuid primary key default gen_random_uuid(), turno_id uuid not null references public.turnos_caja(id),
   tipo text not null check(tipo in ('Ingreso','Egreso')), monto numeric(12,2) not null check(monto > 0),
