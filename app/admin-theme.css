@@ -804,6 +804,36 @@
   .app-shell .attendance-general-footer .button { width:100%; justify-content:center; }
 }
 
+/* Sidebar navigation groups and show/hide controls */
+.app-shell .sidebar { transition: transform .22s ease; }
+.app-shell.sidebar-hidden .sidebar { transform: translateX(-100%); }
+.app-shell.sidebar-hidden .main-shell { margin-left: 0 !important; }
+.app-shell.sidebar-hidden .sidebar.open { transform: translateX(0); }
+.app-shell .sidebar-brand-row { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+.app-shell .sidebar-brand-row .brand { min-width:0; }
+.app-shell .sidebar-hide-button,
+.app-shell .sidebar-toggle { width:36px; height:36px; flex:0 0 36px; display:inline-flex; align-items:center; justify-content:center; border:1px solid #ffffff1b; border-radius:9px; color:#d8d0ca; background:#ffffff08; cursor:pointer; }
+.app-shell .sidebar-hide-button:hover,
+.app-shell .sidebar-toggle:hover { color:#fff; border-color:#ff6a552e; background:#ed1c2e24; }
+.app-shell .sidebar-toggle { display:inline-flex; color:#6d625f; border-color:#e9e2dd; background:#fff; }
+.app-shell .admin-navigation { min-height:0; margin:18px -7px 0; padding:0 7px 8px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#ffffff2a transparent; }
+.app-shell .nav-section { margin:0 0 8px; }
+.app-shell .nav-section-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; padding:10px 12px 6px; border:0; color:#a99c94; background:transparent; font-size:9px; font-weight:750; letter-spacing:1.35px; text-align:left; text-transform:uppercase; cursor:pointer; }
+.app-shell .nav-section-toggle svg { opacity:.65; transition:transform .18s ease; }
+.app-shell .nav-section-toggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+.app-shell .nav-section-toggle:hover { color:#f7e5d9; }
+.app-shell .nav-section-links { display:flex; flex-direction:column; }
+.app-shell .nav-section-links .nav-link { min-height:36px; height:auto; margin:1px 0; }
+.app-shell .nav-section-links .nav-link span:not(.active-dot) { min-width:0; white-space:nowrap; }
+.app-shell .nav-section-links .nav-link.active { color:#fff; }
+.app-shell .sidebar-bottom { margin-top:auto; }
+@media (max-width:760px) {
+  .app-shell .sidebar-toggle { display:inline-flex; }
+  .app-shell .sidebar-hide-button { display:inline-flex; }
+  .app-shell.sidebar-hidden .sidebar { transform:translateX(-100%); }
+  .app-shell.sidebar-hidden .sidebar.open { transform:translateX(0); }
+}
+
 @media screen {
   /* Readable dark surfaces for every admin module, including rules in globals.css. */
   .app-shell .attendance-admin-toolbar { border-color:#ffffff14; background:#15191e; }
