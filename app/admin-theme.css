@@ -819,10 +819,11 @@
 .app-shell .admin-navigation { min-height:0; margin:18px -7px 0; padding:0 7px 8px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#ffffff2a transparent; }
 .app-shell .nav-section { margin:0 0 8px; }
 .app-shell .nav-section-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; padding:10px 12px 6px; border:0; color:#a99c94; background:transparent; font-size:9px; font-weight:750; letter-spacing:1.35px; text-align:left; text-transform:uppercase; cursor:pointer; }
-.app-shell .nav-section-toggle svg { opacity:.65; transition:transform .18s ease; }
+.app-shell .nav-section-toggle svg { opacity:.65; transition:transform .5s ease; }
 .app-shell .nav-section-toggle[aria-expanded="true"] svg { transform:rotate(180deg); }
 .app-shell .nav-section-toggle:hover { color:#f7e5d9; }
-.app-shell .nav-section-links { display:flex; flex-direction:column; }
+.app-shell .nav-section-links { display:flex; flex-direction:column; max-height:0; overflow:hidden; opacity:0; transition:max-height .5s ease, opacity .5s ease; }
+.app-shell .nav-section-links.is-open { max-height:480px; opacity:1; }
 .app-shell .nav-section-links .nav-link { min-height:36px; height:auto; margin:1px 0; }
 .app-shell .nav-section-links .nav-link span:not(.active-dot) { min-width:0; white-space:nowrap; }
 .app-shell .nav-section-links .nav-link.active { color:#fff; }
