@@ -12,6 +12,7 @@ export type CashierSnapshot = {
   products: CashierProduct[]; shift: { id: string; opening: number; openedAt: string; notes: string } | null;
   todayTotal: number; todayTickets: number; expectedCash: number; recentOrders: CashierOrder[];
 };
+export type CashierNotice = { id: string; title: string; body: string; priority: string; date: string; createdAt: string };
 
 function customizationLabel(choice: ChickenCustomization) {
   return `${choice.piece} ${choice.preparation}${choice.accompaniments.length ? ` · ${choice.accompaniments.join(', ')}` : ' · Sin acompañamientos'}`;
@@ -98,6 +99,27 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
       recentOrders,
     } };
   } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo cargar el espacio del cajero.' }; }
+}
+
+export async function loadCashierNotices(): Promise<{ notices?: CashierNotice[]; error?: string }> {
+  try {
+    const { db, profile } = await requireCashier();
+    const { data, error } = await db.from('comunicados')
+      .select('id,titulo,mensaje,prioridad,fecha,created_at')
+      .eq('publicado', true)
+      .or(`sucursal_id.eq.${profile.sucursal_id},sucursal_id.is.null`)
+      .order('created_at', { ascending: false })
+      .limit(30);
+    if (error) throw new Error(error.code === '42501'
+      ? 'La base de datos aún no permite que el cajero lea avisos. Ejecuta database/23_avisos_cajero.sql en Supabase.'
+      : message(error, 'No se pudieron cargar los avisos.'));
+    return { notices: (data || []).map(row => ({
+      id: String(row.id), title: String(row.titulo), body: String(row.mensaje),
+      priority: String(row.prioridad), date: String(row.fecha), createdAt: String(row.created_at),
+    })) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'No se pudieron cargar los avisos.' };
+  }
 }
 
 async function reload() {

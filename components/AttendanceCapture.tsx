@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { Camera, Check, CircleAlert, Clock3, LoaderCircle, LogOut, UserRound } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { signOut } from '../app/auth/actions';
+import ConfirmSignOutForm from './ConfirmSignOutForm';
 import { markAttendance } from '../app/asistencia/actions';
 
 const prompts = ['Mira de frente a la cámara', 'Gira la cabeza hacia tu derecha', 'Vuelve a mirar de frente'];
@@ -208,7 +208,7 @@ export default function AttendanceCapture({ name, role, registeredAt, hasTemplat
   const registeredLabel = registeredAt ? new Intl.DateTimeFormat('es-BO', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit' }).format(new Date(registeredAt)) : '';
 
   return <main className="attendance-page">
-    <header className="attendance-header"><div className="attendance-brand"><span className="attendance-brand-mark">R</span><span>POLLOS ROLY<small>CONTROL DE ASISTENCIA</small></span></div><form action={signOut}><button className="button" type="submit"><LogOut size={16}/> Cerrar sesión</button></form></header>
+    <header className="attendance-header"><div className="attendance-brand"><span className="attendance-brand-mark">R</span><span>POLLOS ROLY<small>CONTROL DE ASISTENCIA</small></span></div><ConfirmSignOutForm><button className="button" type="submit"><LogOut size={16}/> Cerrar sesión</button></ConfirmSignOutForm></header>
     <section className="attendance-card">
       <div className="attendance-greeting"><span className="attendance-icon"><UserRound size={25}/></span><p className="eyebrow">ASISTENCIA DEL PERSONAL</p><h1>Hola, {name}</h1><p className="subtitle">{role} · {hasTemplate ? 'Verifica tu rostro para registrar la entrada de hoy.' : 'Registra tu rostro una vez para usarlo al marcar asistencia.'}</p></div>
       {setupMissing && !saved && <div className="attendance-alert"><CircleAlert size={18}/> Falta configurar las tablas biométricas. Ejecuta <code>database/07_asistencia_biometrica.sql</code> en Supabase.</div>}

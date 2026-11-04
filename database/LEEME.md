@@ -110,6 +110,8 @@ Para administrar bebidas por sucursal, ejecuta `15_inventario_bebidas.sql` despu
 
 Para que cada nueva venta aparezca ya como completada en el historial del cajero, ejecuta `16_pedidos_completados.sql` en Supabase. La base conserva el estado interno `Entregado`, que el punto de venta presenta como **Completado**.
 
+Para que el Cajero pueda ver los avisos publicados para su sucursal y recibirlos automáticamente en pantalla, ejecuta `23_avisos_cajero.sql` en Supabase después de `11_cajero.sql`. Los avisos se revisan periódicamente mientras la pantalla del cajero está abierta; cada aviso nuevo aparece durante cinco segundos y también queda disponible desde la campana.
+
 Para habilitar el botón **Eliminar** del apartado Insumos, ejecuta `17_eliminar_insumo.sql` en Supabase. Solo un administrador puede eliminar un insumo sin compras relacionadas; los insumos usados en compras permanecen para proteger el historial.
 
 Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar_usuario.sql` en Supabase. No permite eliminar la sesión propia ni cuentas vinculadas a asistencias, ventas, turnos, compras o pagos; en esos casos desactiva la cuenta para preservar el historial.
