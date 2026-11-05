@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowDownToLine, ArrowRight, Bell, CalendarDays, Check, ChefHat, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, CreditCard, LayoutDashboard, Menu, MoreHorizontal, Package, Pencil, Plus, Search, Settings, ShoppingBag, ShoppingBasket, Store, Trash2, Users, UtensilsCrossed, X } from 'lucide-react';
+import { ArrowDownToLine, ArrowRight, Bell, CalendarDays, Check, ChefHat, ChevronDown, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, CreditCard, LayoutDashboard, Menu, Moon, MoreHorizontal, Package, Pencil, Plus, Search, Settings, ShoppingBag, ShoppingBasket, Store, Sun, Trash2, Users, UtensilsCrossed, X } from 'lucide-react';
 import { Branch, Category, Data, Employee, localDate, Product, Stock } from '../lib/data';
 import MenuCategories from './MenuCategories';
 import ProductEditor from './ProductEditor';
@@ -37,6 +37,7 @@ export default function AdminApp({ section }: { section: string }) {
   const [mutationError, setMutationError] = useState('');
   const [alerts, setAlerts] = useState(false);
   const [accountMenu, setAccountMenu] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
   const [modal, setModal] = useState<Modal>(null);
   const [stockToDelete, setStockToDelete] = useState<Stock | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
@@ -47,6 +48,16 @@ export default function AdminApp({ section }: { section: string }) {
   const [needsRefresh, setNeedsRefresh] = useState(false);
   const [refreshCount, setRefreshCount] = useState(0);
   const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    try { setLightMode(window.localStorage.getItem('pollos-roly-admin-theme') === 'light'); } catch { /* El tema permanece oscuro si el almacenamiento local está bloqueado. */ }
+  }, []);
+  function toggleTheme() {
+    setLightMode(current => {
+      const next = !current;
+      try { window.localStorage.setItem('pollos-roly-admin-theme', next ? 'light' : 'dark'); } catch { /* El cambio sigue activo hasta salir de esta página. */ }
+      return next;
+    });
+  }
   useEffect(() => {
     let active = true;
     loadAdminData().then(result => { if (!active) return; if (result.data) setData(result.data); else setLoadError(result.error || 'No se pudieron cargar los datos.'); }).catch(() => { if (active) setLoadError('No se pudo conectar con el servidor.'); });
@@ -190,7 +201,7 @@ export default function AdminApp({ section }: { section: string }) {
     paymentOffset += p.percent;
     return `${p.color} ${start}% ${paymentOffset}%`;
   }).join(', ');
-  return <div className={`app-shell ${sidebarHidden ? 'sidebar-hidden' : ''}`} aria-busy={saving} onKeyDownCapture={event => { if (saving) event.preventDefault(); }}>
+  return <div className={`app-shell ${sidebarHidden ? 'sidebar-hidden' : ''} ${lightMode ? 'light-mode' : ''}`} aria-busy={saving} onKeyDownCapture={event => { if (saving) event.preventDefault(); }}>
     {saving && <div className="saving-mask" role="status">Guardando o actualizando en Supabase…</div>}
     {mobile && <button className="sidebar-shade" aria-label="Cerrar menú" onClick={() => setMobile(false)} />}
     <aside className={`sidebar ${mobile ? 'open' : ''}`}>
@@ -200,7 +211,7 @@ export default function AdminApp({ section }: { section: string }) {
       <div className="sidebar-bottom"><div className="sidebar-promo"><Image src="/images/chicken-sidebar.png" alt="El buen sabor siempre suma. Pollos Roly." fill sizes="250px" /></div></div>
     </aside>
     <div className="main-shell">
-      <header className="topbar">{section === 'dashboard' && <div className="dashboard-garnish" aria-hidden="true"><Image src="/images/chicken-header.png" alt="" fill sizes="(max-width: 760px) 0px, 560px" priority /></div>}<div className="breadcrumb">{!mobile && <button className="icon-button sidebar-toggle" aria-label={sidebarHidden ? 'Mostrar barra lateral' : 'Ocultar barra lateral'} title={sidebarHidden ? 'Mostrar barra lateral' : 'Ocultar barra lateral'} onClick={() => { if (window.matchMedia('(max-width: 760px)').matches) setMobile(true); else setSidebarHidden(value => !value); }}><Menu size={21} /></button>}</div><div className="topbar-actions"><div className="alerts-wrap"><button className="icon-button notification" aria-label="Ver alertas de inventario" aria-expanded={alerts} onClick={() => setAlerts(!alerts)}><Bell size={19} />{lowStock.length > 0 && <i />}</button>{alerts && <div className="alerts-panel"><strong>Alertas de inventario</strong>{lowStock.length ? lowStock.map(i => <p key={i.id}>{i.name}<small>{i.quantity} {i.unit} · {branchName(i.branch)}</small></p>) : <p>Todo el inventario está por encima del mínimo.</p>}<Link href="/admin/inventario">Revisar inventario <ArrowRight size={14} /></Link></div>}</div><div className="top-divider" /><div className="account-menu-wrap" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setAccountMenu(false); }} onKeyDown={event => { if (event.key === 'Escape') setAccountMenu(false); }}><button type="button" className="top-user" aria-haspopup="menu" aria-expanded={accountMenu} aria-controls="account-menu" onClick={() => setAccountMenu(value => !value)}><Image className="avatar small top-brand-logo" src="/images/logo-pollos-roly.png" alt="Logo Pollos Roly" width={40} height={40} /><span>{data.profile.name}<small>{data.settings.name || 'Mi negocio'}</small></span><ChevronDown size={14} /></button>{accountMenu && <div id="account-menu" className="account-menu" role="menu"><ConfirmSignOutForm><button type="submit" role="menuitem"><X size={16} />Cerrar sesión</button></ConfirmSignOutForm></div>}</div></div></header>
+      <header className="topbar">{section === 'dashboard' && <div className="dashboard-garnish" aria-hidden="true"><Image src="/images/chicken-header.png" alt="" fill sizes="(max-width: 760px) 0px, 560px" priority /></div>}<div className="breadcrumb">{!mobile && <button className="icon-button sidebar-toggle" aria-label={sidebarHidden ? 'Mostrar barra lateral' : 'Ocultar barra lateral'} title={sidebarHidden ? 'Mostrar barra lateral' : 'Ocultar barra lateral'} onClick={() => { if (window.matchMedia('(max-width: 760px)').matches) setMobile(true); else setSidebarHidden(value => !value); }}><Menu size={21} /></button>}</div><div className="topbar-actions"><button type="button" className="icon-button theme-toggle" aria-label={lightMode ? 'Activar modo oscuro' : 'Activar modo claro'} title={lightMode ? 'Activar modo oscuro' : 'Activar modo claro'} onClick={toggleTheme}>{lightMode ? <Moon size={19} /> : <Sun size={19} />}</button><div className="alerts-wrap"><button className="icon-button notification" aria-label="Ver alertas de inventario" aria-expanded={alerts} onClick={() => setAlerts(!alerts)}><Bell size={19} />{lowStock.length > 0 && <i />}</button>{alerts && <div className="alerts-panel"><strong>Alertas de inventario</strong>{lowStock.length ? lowStock.map(i => <p key={i.id}>{i.name}<small>{i.quantity} {i.unit} · {branchName(i.branch)}</small></p>) : <p>Todo el inventario está por encima del mínimo.</p>}<Link href="/admin/inventario">Revisar inventario <ArrowRight size={14} /></Link></div>}</div><div className="top-divider" /><div className="account-menu-wrap" onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setAccountMenu(false); }} onKeyDown={event => { if (event.key === 'Escape') setAccountMenu(false); }}><button type="button" className="top-user" aria-haspopup="menu" aria-expanded={accountMenu} aria-controls="account-menu" onClick={() => setAccountMenu(value => !value)}><Image className="avatar small top-brand-logo" src="/images/logo-pollos-roly.png" alt="Logo Pollos Roly" width={40} height={40} /><span>{data.profile.name}<small>{data.settings.name || 'Mi negocio'}</small></span><ChevronDown size={14} /></button>{accountMenu && <div id="account-menu" className="account-menu" role="menu"><ConfirmSignOutForm><button type="submit" role="menuitem"><X size={16} />Cerrar sesión</button></ConfirmSignOutForm></div>}</div></div></header>
       <main>
         {section !== 'dashboard' && <div className="connected-banner"><span><span className="green-dot" /> Datos reales · {data.settings.name}</span><button className="button" onClick={refresh} disabled={saving}>Actualizar datos</button></div>}
         {(loadError || needsRefresh) && <div className="error-banner" role="alert">{loadError || "El cambio se envió a Supabase. Actualiza los datos antes de continuar."}</div>}{!data.branches.some(b => b.active) && <div className="info-note">Empieza creando o activando tu primera <Link href="/admin/sucursales">sucursal</Link>. Después podrás registrar productos, insumos y personal.</div>}
