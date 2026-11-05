@@ -968,6 +968,17 @@
 .app-shell.light-mode .sidebar-hide-button { display:none; }
 .app-shell.light-mode .sidebar-hide-button:hover,
 .app-shell.light-mode .sidebar-toggle:hover { color:#e30613; background:#fff1f2; }
+.app-shell.light-mode .admin-navigation { min-height:0; margin:22px -7px 0; padding:0 7px 12px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:#e4e7ec transparent; }
+.app-shell.light-mode .nav-section { margin:0 0 12px; }
+.app-shell.light-mode .nav-section-toggle { width:100%; display:flex; align-items:center; justify-content:space-between; padding:9px 12px 8px; border:0; border-radius:8px; color:#667085; background:transparent; font-size:10px; font-weight:750; letter-spacing:.9px; text-align:left; cursor:pointer; transition:color .18s ease,background .18s ease; }
+.app-shell.light-mode .nav-section-toggle svg { flex:none; opacity:.72; transition:transform .5s ease; }
+.app-shell.light-mode .nav-section-toggle[aria-expanded="true"] svg { transform:rotate(180deg); }
+.app-shell.light-mode .nav-section-toggle:hover { color:#e30613; background:#fff1f2; }
+.app-shell.light-mode .nav-section-links { display:flex; flex-direction:column; max-height:0; overflow:hidden; opacity:0; transition:max-height .5s ease,opacity .5s ease; }
+.app-shell.light-mode .nav-section-links.is-open { max-height:560px; opacity:1; }
+.app-shell.light-mode .nav-section-links .nav-link { min-height:40px; height:auto; margin:3px 0; padding-right:11px; }
+.app-shell.light-mode .nav-section-links .nav-link span:not(.active-dot) { min-width:0; white-space:nowrap; }
+.app-shell.light-mode .nav-section-links .nav-link.active { color:#fff; }
 .app-shell.light-mode .sidebar { background:#fff; border-right:1px solid #e8e8ec; color:#121826; box-shadow:5px 0 20px #1018280a; }
 .app-shell.light-mode .brand { color:#121826; border-bottom-color:#e8e8ec; }
 .app-shell.light-mode .brand b { color:#e30613; }
