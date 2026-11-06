@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { ArrowDownUp, Ban, Bell, ChefHat, Check, CircleDollarSign, Clock3, ConciergeBell, Drumstick, Flame, Grid2X2, History, LogOut, Minus, Package, Pencil, Plus, Popcorn, Printer, QrCode, RefreshCw, Search, ShoppingBag, Store, CupSoda, Wallet, X } from 'lucide-react';
 import ConfirmSignOutForm from './ConfirmSignOutForm';
+import BeverageAlerts from './BeverageAlerts';
 import { cancelCashierOrder, CashierNotice, CashierOrder, CashierProduct, CashierSnapshot, ChickenCustomization, closeCashierShift, loadCashierData, loadCashierNotices, openCashierShift, registerCashierSale, updateCashierOrder } from '../app/cajero/actions';
 import { productPhotoUrl } from '../lib/products';
 
@@ -90,6 +91,7 @@ export default function CashierApp() {
   }, [data?.shift?.id, data?.expectedCash]);
 
   const categories = useMemo(() => ['Todos', ...new Set(data?.products.map(p => p.category) || [])], [data?.products]);
+  const alertBranches = useMemo(() => data ? [{ id: data.branchId, name: data.branchName }] : [], [data?.branchId, data?.branchName]);
   const products = useMemo(() => (data?.products || []).filter(p =>
     (category === 'Todos' || p.category === category) &&
     p.name.toLocaleLowerCase('es').includes(productQuery.trim().toLocaleLowerCase('es')),
@@ -277,6 +279,7 @@ export default function CashierApp() {
   const header = <header className="cashier-header"><a className="cashier-brand" href="/cajero"><span className="cashier-brand-logo"><Image src="/images/logo-pollos-roly.png" alt="Pollos Roly" width={64} height={64} priority /></span><strong>Pollos Roly<small>PUNTO DE VENTA</small></strong></a><span className={`cashier-shift-pill ${shift ? 'is-open' : ''}`}><i />{shift ? 'Caja abierta' : 'Caja cerrada'}</span><div className="cashier-header-user"><span className="cashier-avatar">{data.profileName.slice(0, 1).toUpperCase()}</span><span>{data.profileName}<small>Cajero</small></span><span className="cashier-header-branch"><Store size={14}/>{data.branchName}</span>{noticeControl}<ConfirmSignOutForm><button className="button" aria-label="Cerrar sesión"><LogOut size={16} />Cerrar sesión</button></ConfirmSignOutForm></div></header>;
   if (!shift) return <main className="cashier-page is-opening">
     {header}
+    <BeverageAlerts products={data.products} branches={alertBranches} onTransferred={() => { void refresh(); }} />
     {noticeOverlay}
     <section className="cashier-open-stage">
       <div className="cashier-open-backdrop-art" aria-hidden="true"><Image src="/images/chicken-header.png" alt="" fill sizes="(max-width: 760px) 0px, 520px" priority /></div>
@@ -297,6 +300,7 @@ export default function CashierApp() {
 
   return <main className="cashier-page">
     {header}
+    <BeverageAlerts products={data.products} branches={alertBranches} onTransferred={() => { void refresh(); }} />
     {noticeOverlay}
     {(error || message) && <div className={error ? 'cashier-alert is-error' : 'cashier-alert is-success'} role={error ? 'alert' : 'status'}>{error || message}<button onClick={() => { setError(''); setMessage(''); }} aria-label="Cerrar aviso"><X size={16} /></button></div>}
     {panel === 'venta' && <>

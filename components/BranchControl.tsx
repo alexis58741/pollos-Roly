@@ -41,7 +41,7 @@ export default function BranchControl({ data, saving, mutate }: { data: Data; sa
     const sales = validOrders.reduce((total, order) => total + order.total, 0);
     const items = data.stock.filter(item => item.branch === branch.id).map(item => ({ name: item.name, quantity: item.quantity, minimum: item.minimum, unit: item.unit }));
     const snackItems = data.snackStocks.filter(item => item.branch === branch.id).map(item => ({ name: data.products.find(product => product.id === item.product)?.name || 'Snack', quantity: item.quantity, minimum: item.minimum, unit: 'unid.' }));
-    const drinkItems = data.beverageStocks.filter(item => item.branch === branch.id).map(item => ({ name: data.products.find(product => product.id === item.product)?.name || 'Bebida', quantity: item.freezer + item.warehouse, minimum: item.minimum, unit: 'unid.', freezer: item.freezer, warehouse: item.warehouse }));
+    const drinkItems = data.beverageStocks.filter(item => item.branch === branch.id).map(item => ({ name: data.products.find(product => product.id === item.product)?.name || 'Bebida', quantity: item.freezer, minimum: item.minimum, unit: 'unid. en freezer', freezer: item.freezer, warehouse: item.warehouse }));
     const branchAttendance = attendance.filter(record => record.branch === branch.id);
     const activeStaff = data.users.filter(user => user.branch === branch.id && user.active);
     const movements = data.cashMovements.filter(movement => openShifts.some(shift => shift.id === movement.shift)).sort((a, b) => b.date.localeCompare(a.date));

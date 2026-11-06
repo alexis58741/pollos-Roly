@@ -108,6 +108,8 @@ Para pedir platos de pollo con selección por porción, ejecuta `14_personalizac
 
 Para administrar bebidas por sucursal, ejecuta `15_inventario_bebidas.sql` después de 11, 12, 13 y 14. Aparecerá el apartado **Bebidas** en el administrador. Cada producto de la categoría Bebidas se muestra por sucursal, permite registrar unidades en freezer y almacén, y el POS muestra el total disponible. Las ventas descuentan primero del freezer y después del almacén; editar pedidos revierte el consumo anterior y las anulaciones restituyen las cantidades en su ubicación original.
 
+Para avisar cuando el **freezer** llegue al mínimo y trasladar unidades desde almacén sin perder stock, ejecuta `22_reposicion_bebidas.sql` después de `15_inventario_bebidas.sql`. Administrador y cajero verán las alertas en su pantalla. Pueden activar avisos del navegador en su dispositivo mientras la aplicación esté abierta; para recibir avisos con la aplicación cerrada se necesitaría configurar un servicio de notificaciones push adicional.
+
 Para que cada nueva venta aparezca ya como completada en el historial del cajero, ejecuta `16_pedidos_completados.sql` en Supabase. La base conserva el estado interno `Entregado`, que el punto de venta presenta como **Completado**.
 
 Para que el Cajero pueda ver los avisos publicados para su sucursal y recibirlos automáticamente en pantalla, ejecuta `23_avisos_cajero.sql` en Supabase después de `11_cajero.sql`. Los avisos se revisan periódicamente mientras la pantalla del cajero está abierta; cada aviso nuevo aparece durante cinco segundos y también queda disponible desde la campana.
