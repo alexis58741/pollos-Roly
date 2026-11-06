@@ -17,6 +17,7 @@ export const navigation = [
   { id: 'pagos-personal', label: 'Pagos al Personal', icon: HandCoins, href: '/admin/pagos-personal', group: 'personal' },
   { id: 'finanzas-personales', label: 'Ingreso / Egreso', icon: TrendingUp, href: '/admin/finanzas-personales', group: 'negocio' },
   { id: 'sucursales', label: 'Sucursales', icon: Store, href: '/admin/sucursales', group: 'negocio' },
+  { id: 'control-sucursales', label: 'Control de sucursales', icon: Store, href: '/admin/control-sucursales', group: 'negocio' },
   { id: 'perfil', label: 'Mi Perfil', icon: UserRound, href: '/admin/perfil', group: 'sistema' },
   { id: 'configuracion', label: 'Configuración', icon: Settings, href: '/admin/configuracion', group: 'sistema' },
 ];
@@ -29,4 +30,4 @@ export const navigationGroups = [
   { id: 'negocio', label: 'Negocio' },
   { id: 'sistema', label: 'Administración' },
 ].map(group => ({ ...group, items: navigation.filter(item => item.group === group.id) }));
-export const advancedSections = ['caja', 'comunicados', 'snacks', 'bebidas', 'proveedores', 'compras', 'reportes', 'empleados', 'asistencia', 'tiempo-asistencia', 'pagos-personal', 'finanzas-personales', 'perfil'];
+export const advancedSections = ['caja', 'comunicados', 'snacks', 'bebidas', 'proveedores', 'compras', 'reportes', 'empleados', 'asistencia', 'tiempo-asistencia', 'pagos-personal', 'finanzas-personales', 'perfil', 'control-sucursales'];
