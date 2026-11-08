@@ -1006,9 +1006,9 @@
 .app-shell.light-mode .top-user>svg,.app-shell.light-mode .notification,.app-shell.light-mode .sidebar-toggle { color:#475467; }
 .app-shell.light-mode .top-divider { background:#e8e8ec; }
 .app-shell.light-mode .main-shell main { background:#f8f9fb; }
-.app-shell.light-mode .sidebar-promo { position:relative; height:118px; min-height:118px; overflow:hidden; isolation:isolate; padding:0; border-color:#f4e4d6; border-radius:13px; background:#321313; }
+.app-shell.light-mode .sidebar-promo { position:relative; height:118px; min-height:118px; overflow:hidden; isolation:isolate; padding:0; border-color:#f4e4d6; border-radius:13px; background:#190d0e; }
 .app-shell.light-mode .sidebar-promo::after { content:none; }
-.app-shell.light-mode .sidebar-promo>img { z-index:0; object-fit:cover; object-position:68% center; }
+.app-shell.light-mode .sidebar-promo>img { z-index:0; object-fit:contain; object-position:center; }
 .app-shell.light-mode .page-heading h1,.app-shell.light-mode .panel-heading h2 { color:#121826; }
 .app-shell.light-mode .page-heading .subtitle,.app-shell.light-mode .panel-heading p { color:#667085; }
 .app-shell.light-mode .page-heading .eyebrow,.app-shell.light-mode .text-link { color:#e30613; }
