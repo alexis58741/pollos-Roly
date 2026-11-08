@@ -20,7 +20,9 @@ export async function signIn(_previous: { error: string }, form: FormData) {
     if (profile.rol === 'Administrador') {
       destination = '/admin/dashboard';
     } else if (profile.rol === 'Cajero') {
-      destination = '/asistencia';
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz' }).format(new Date());
+      const { data: attendance } = await db.from('asistencias').select('id').eq('empleado_id', data.user.id).eq('fecha', today).maybeSingle();
+      destination = attendance ? '/cajero' : '/asistencia';
     } else if (['Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'].includes(profile.rol)) {
       destination = '/asistencia';
     } else {

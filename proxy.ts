@@ -16,7 +16,9 @@ export async function proxy(request: NextRequest) {
   } });
   const { data: { user } } = await db.auth.getUser();
   response.headers.set('Cache-Control', 'private, no-store');
-  if (!user && (request.nextUrl.pathname.startsWith('/admin') || request.nextUrl.pathname.startsWith('/asistencia') || request.nextUrl.pathname.startsWith('/cajero'))) {
+  // /asistencia is a shared walk-up tablet: employees identify themselves by
+  // matching their saved face template, so it must not require an Auth session.
+  if (!user && (request.nextUrl.pathname.startsWith('/admin') || request.nextUrl.pathname.startsWith('/cajero'))) {
     const login = new URL('/login', request.url);
     const redirect = NextResponse.redirect(login);
     response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));

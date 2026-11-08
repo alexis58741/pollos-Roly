@@ -3,53 +3,73 @@
 import { createClient } from '../../lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-const ATTENDANCE_ROLES = ['Cajero', 'Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'];
 const EMBEDDING_SIZE = 1024;
-const MATCH_THRESHOLD = 0.5;
 
 function validDescriptor(value: unknown): value is number[] {
   return Array.isArray(value) && value.length === EMBEDDING_SIZE && value.every((item) => typeof item === 'number' && Number.isFinite(item) && Math.abs(item) <= 10);
 }
 
-function faceSimilarity(left: number[], right: number[]) {
-  if (left.length !== EMBEDDING_SIZE || right.length !== EMBEDDING_SIZE) return 0;
-  let squaredDistance = 0;
-  for (let i = 0; i < EMBEDDING_SIZE; i++) squaredDistance += (left[i] - right[i]) ** 2;
-  const distance = Math.round(100 * 25 * squaredDistance) / 100;
-  const normalized = (1 - Math.sqrt(distance) / 100 - 0.2) / (0.8 - 0.2);
-  return Math.round(100 * Math.max(0, Math.min(1, normalized))) / 100;
-}
+export type KioskAttendanceResult = {
+  error?: string;
+  success?: boolean;
+  name?: string;
+  role?: string;
+  registeredAt?: string;
+  alreadyMarked?: boolean;
+};
 
-export async function markAttendance(form: FormData): Promise<{ error?: string; success?: boolean; enrolled?: boolean }> {
-  const db = await createClient();
-  const { data: { user } } = await db.auth.getUser();
-  if (!user) return { error: 'Tu sesión terminó. Inicia sesión de nuevo.' };
-
-  const { data: profile, error: profileError } = await db.from('perfiles').select('rol,activo').eq('id', user.id).single();
-  if (profileError || !profile?.activo || !ATTENDANCE_ROLES.includes(profile.rol)) return { error: 'Tu cuenta no tiene permiso para marcar asistencia.' };
-
+/**
+ * Shared attendance kiosk. Face templates stay inside the SECURITY DEFINER
+ * database function; the browser only receives the matched employee and time.
+ */
+export async function markAttendance(form: FormData): Promise<KioskAttendanceResult> {
   let descriptor: unknown;
-  try { descriptor = JSON.parse(String(form.get('descriptor') || '')); } catch { return { error: 'No se pudo leer el escaneo facial. Repite la verificación.' }; }
+  try { descriptor = JSON.parse(String(form.get('descriptor') || '')); }
+  catch { return { error: 'No se pudo leer el escaneo facial. Repite la verificación.' }; }
   if (!validDescriptor(descriptor)) return { error: 'El escaneo no tiene suficiente información. Repite la verificación.' };
 
-  const { data: template, error: templateReadError } = await db.from('plantillas_faciales').select('descriptor').eq('empleado_id', user.id).maybeSingle();
-  if (templateReadError) return { error: 'Falta configurar las plantillas faciales. Ejecuta database/07_asistencia_biometrica.sql en Supabase.' };
-
-  let enrolled = false;
-  if (!template) {
-    if (form.get('consent') !== 'accepted') return { error: 'Confirma que autorizas guardar tu plantilla facial para verificar la asistencia.' };
-    const { error } = await db.from('plantillas_faciales').insert({ empleado_id: user.id, descriptor });
-    if (error) return { error: error.code === '23505' ? 'La plantilla se acaba de registrar en otra sesión. Repite para verificar tu rostro.' : 'No se pudo guardar tu plantilla facial. Comprueba que ejecutaste database/07_asistencia_biometrica.sql.' };
-    enrolled = true;
-  } else {
-    if (!validDescriptor(template.descriptor)) return { error: 'La plantilla facial guardada no es válida. Contacta al administrador para restablecerla.' };
-    if (faceSimilarity(descriptor, template.descriptor) < MATCH_THRESHOLD) return { error: 'El rostro no coincide con la plantilla registrada. Intenta de nuevo con buena iluminación y mirando al frente.' };
+  try {
+    const db = await createClient();
+    const { data, error } = await db.rpc('marcar_asistencia_kiosco', { p_descriptor: descriptor });
+    if (error) {
+      if (error.code === '42883' || error.code === 'PGRST202') return { error: 'Falta habilitar el modo de tablet. Ejecuta database/24_asistencia_kiosco.sql en Supabase.' };
+      if (error.code === '42501') return { error: 'Supabase aún no permite registrar desde esta tablet. Ejecuta database/24_asistencia_kiosco.sql.' };
+      return { error: 'No se pudo consultar la asistencia. Comprueba la conexión e inténtalo otra vez.' };
+    }
+    const result = Array.isArray(data) ? data[0] : data;
+    if (!result?.success) return { error: result?.message || 'No encontramos un rostro registrado. Pide al administrador que registre la plantilla facial.' };
+    revalidatePath('/asistencia');
+    revalidatePath('/admin/asistencia');
+    revalidatePath('/cajero');
+    return {
+      success: true,
+      name: result.employee_name,
+      role: result.employee_role,
+      registeredAt: result.registered_at,
+      alreadyMarked: Boolean(result.already_marked),
+    };
+  } catch {
+    return { error: 'No se pudo conectar con el sistema de asistencia. Inténtalo de nuevo.' };
   }
+}
 
-  const { error: insertError } = await db.from('asistencias').insert({ empleado_id: user.id });
-  if (insertError) return { error: insertError.code === '23505' ? 'La asistencia de hoy ya está registrada.' : 'No se pudo registrar la asistencia. Verifica que ejecutaste database/07_asistencia_biometrica.sql.' };
-
-  revalidatePath('/asistencia');
-  revalidatePath('/cajero');
-  return { success: true, enrolled };
+/** One-time template enrollment remains account-bound; daily check-in uses the shared kiosk. */
+export async function enrollFaceAndMarkAttendance(form: FormData): Promise<KioskAttendanceResult> {
+  if (form.get('consent') !== 'accepted') return { error: 'Confirma que autorizas guardar tu plantilla facial para usar la asistencia.' };
+  let descriptor: unknown;
+  try { descriptor = JSON.parse(String(form.get('descriptor') || '')); }
+  catch { return { error: 'No se pudo leer el escaneo facial. Repite la verificación.' }; }
+  if (!validDescriptor(descriptor)) return { error: 'El escaneo no tiene suficiente información. Repite la verificación.' };
+  try {
+    const db = await createClient();
+    const { data: { user } } = await db.auth.getUser();
+    if (!user) return { error: 'Para registrar el rostro por primera vez, inicia sesión una vez con tu cuenta de empleado.' };
+    const { data: profile, error: profileError } = await db.from('perfiles').select('rol,activo').eq('id', user.id).single();
+    if (profileError || !profile?.activo || !['Cajero', 'Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'].includes(profile.rol)) return { error: 'La cuenta no puede registrar una plantilla de asistencia.' };
+    const { error } = await db.from('plantillas_faciales').upsert({ empleado_id: user.id, descriptor }, { onConflict: 'empleado_id', ignoreDuplicates: true });
+    if (error) return { error: 'No se pudo guardar la plantilla facial. Verifica la migración biométrica 07.' };
+    return markAttendance(form);
+  } catch {
+    return { error: 'No se pudo guardar el rostro. Comprueba la conexión e inténtalo otra vez.' };
+  }
 }

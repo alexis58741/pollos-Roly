@@ -2,13 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
-type AttendanceProps = {
-  name: string;
-  role: string;
-  registeredAt: string | null;
-  hasTemplate: boolean;
-  setupMissing: boolean;
-};
+type AttendanceProps = { enrollmentName?: string; enrollmentRole?: string };
 
 const AttendanceCapture = dynamic<AttendanceProps>(() => import('./AttendanceCapture'), {
   ssr: false,
