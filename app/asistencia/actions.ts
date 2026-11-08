@@ -66,8 +66,12 @@ export async function enrollFaceAndMarkAttendance(form: FormData): Promise<Kiosk
     if (!user) return { error: 'Para registrar el rostro por primera vez, inicia sesión una vez con tu cuenta de empleado.' };
     const { data: profile, error: profileError } = await db.from('perfiles').select('rol,activo').eq('id', user.id).single();
     if (profileError || !profile?.activo || !['Cajero', 'Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'].includes(profile.rol)) return { error: 'La cuenta no puede registrar una plantilla de asistencia.' };
-    const { error } = await db.from('plantillas_faciales').upsert({ empleado_id: user.id, descriptor }, { onConflict: 'empleado_id', ignoreDuplicates: true });
-    if (error) return { error: 'No se pudo guardar la plantilla facial. Verifica la migración biométrica 07.' };
+    const { data: existing, error: readError } = await db.from('plantillas_faciales').select('id').eq('empleado_id', user.id).maybeSingle();
+    if (readError) return { error: 'No se pudo consultar la plantilla facial. Verifica la migración biométrica 07 y la actualización 25.' };
+    const saved = existing
+      ? await db.from('plantillas_faciales').update({ descriptor }).eq('id', existing.id)
+      : await db.from('plantillas_faciales').insert({ empleado_id: user.id, descriptor });
+    if (saved.error) return { error: 'No se pudo guardar la plantilla facial. Verifica la migración biométrica 07 y la actualización 25.' };
     return markAttendance(form);
   } catch {
     return { error: 'No se pudo guardar el rostro. Comprueba la conexión e inténtalo otra vez.' };

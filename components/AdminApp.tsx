@@ -11,7 +11,7 @@ import { effectivePrice, productPhotoUrl } from '../lib/products';
 import { navigation, navigationGroups, advancedSections } from '../lib/navigation';
 import AdminModules from './AdminModules';
 import { csvDownload, paymentTotal } from '../lib/business';
-import { createSystemUser, deleteStockRecord, deleteSystemUser, loadAdminData, saveAdminMutation } from '../app/admin/actions';
+import { createSystemUser, deleteStockRecord, deleteSystemUser, loadAdminData, saveAdminMutation, saveEmployeeFaceTemplate } from '../app/admin/actions';
 import { planMutation, type Mutation } from '../lib/supabase/operations';
 import ConfirmSignOutForm from './ConfirmSignOutForm';
 import { inventoryAlerts, matchingBranches } from '../lib/admin-selectors';
@@ -223,7 +223,7 @@ export default function AdminApp({ section }: { section: string }) {
         {section === 'asistencia' && <AdminAttendance branches={data.branches} />}
         {section === 'tiempo-asistencia' && <AdminAttendanceTime users={data.users} />}
         {section === 'control-sucursales' && <BranchControl data={data} saving={saving} mutate={(operation, message) => update(data, message, { operation })} />}
-        {advancedSections.includes(section) && section !== 'asistencia' && section !== 'tiempo-asistencia' && section !== 'control-sucursales' && <AdminModules key={refreshCount} section={section} data={data} saving={saving} update={update} mutate={(operation, message) => update(data, message, { operation })} notify={setNotice} refresh={refresh} mutationError={mutationError} clearMutationError={() => setMutationError('')} createUser={createSystemUser} deleteUser={deleteSystemUser} />}
+        {advancedSections.includes(section) && section !== 'asistencia' && section !== 'tiempo-asistencia' && section !== 'control-sucursales' && <AdminModules key={refreshCount} section={section} data={data} saving={saving} update={update} mutate={(operation, message) => update(data, message, { operation })} notify={setNotice} refresh={refresh} mutationError={mutationError} clearMutationError={() => setMutationError('')} createUser={createSystemUser} deleteUser={deleteSystemUser} saveEmployeeFace={saveEmployeeFaceTemplate} />}
         {section === 'dashboard' && <>
           <div className="stats-grid">{[
             { title: 'Ventas totales', value: money(revenue), icon: CircleDollarSign, color: 'orange', detail: `${period === 'today' ? 'Ayer' : 'Período anterior'}: ${money(previousRevenue)}`, change: changePercent(revenue, previousRevenue) },

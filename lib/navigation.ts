@@ -12,6 +12,7 @@ export const navigation = [
   { id: 'compras', label: 'Compras', icon: ShoppingBasket, href: '/admin/inventario/compras', group: 'inventario' },
   { id: 'reportes', label: 'Reportes', icon: BarChart3, href: '/admin/reportes', group: 'analisis' },
   { id: 'empleados', label: 'Usuarios del Sistema', icon: UserCog, href: '/admin/empleados', group: 'personal' },
+  { id: 'personal-operativo', label: 'Empleados', icon: UserRound, href: '/admin/personal-operativo', group: 'personal' },
   { id: 'asistencia', label: 'Asistencia', icon: Clock3, href: '/admin/asistencia', group: 'personal' },
   { id: 'tiempo-asistencia', label: 'Tiempo asistencia', icon: Timer, href: '/admin/tiempo-asistencia', group: 'personal' },
   { id: 'pagos-personal', label: 'Pagos al Personal', icon: HandCoins, href: '/admin/pagos-personal', group: 'personal' },
@@ -30,4 +31,4 @@ export const navigationGroups = [
   { id: 'negocio', label: 'Negocio' },
   { id: 'sistema', label: 'Administración' },
 ].map(group => ({ ...group, items: navigation.filter(item => item.group === group.id) }));
-export const advancedSections = ['caja', 'comunicados', 'snacks', 'bebidas', 'proveedores', 'compras', 'reportes', 'empleados', 'asistencia', 'tiempo-asistencia', 'pagos-personal', 'finanzas-personales', 'perfil', 'control-sucursales'];
+export const advancedSections = ['caja', 'comunicados', 'snacks', 'bebidas', 'proveedores', 'compras', 'reportes', 'empleados', 'personal-operativo', 'asistencia', 'tiempo-asistencia', 'pagos-personal', 'finanzas-personales', 'perfil', 'control-sucursales'];

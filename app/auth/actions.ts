@@ -23,11 +23,9 @@ export async function signIn(_previous: { error: string }, form: FormData) {
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz' }).format(new Date());
       const { data: attendance } = await db.from('asistencias').select('id').eq('empleado_id', data.user.id).eq('fecha', today).maybeSingle();
       destination = attendance ? '/cajero' : '/asistencia';
-    } else if (['Supervisor', 'Cocinero', 'Mesero', 'Repartidor', 'Limpieza'].includes(profile.rol)) {
-      destination = '/asistencia';
     } else {
       await db.auth.signOut({ scope: 'local' });
-      return { error: 'El acceso de Cajero aún no está habilitado en este sistema.' };
+      return { error: 'Solo las cuentas de Administrador y Cajero pueden iniciar sesión. Marca tu asistencia en la tablet del personal.' };
     }
   } catch { return { error: 'No se pudo conectar con Supabase. Revisa tu conexión y vuelve a intentar.' }; }
   revalidatePath('/', 'layout');

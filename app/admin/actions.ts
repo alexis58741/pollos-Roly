@@ -41,9 +41,10 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
   try {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new Error('Selecciona una fecha válida.');
     const { db } = await requireAdmin();
-    const { data: entries, error } = await db.from('asistencias').select('id,empleado_id,registrada_en,salida_en').eq('fecha', date).order('registrada_en', { ascending: false });
+    const { data: entries, error } = await db.from('asistencias').select('id,empleado_id,personal_id,registrada_en,salida_en').eq('fecha', date).order('registrada_en', { ascending: false });
     if (error) {
       if (error.code === '42P01' || error.code === 'PGRST205') throw new Error('Falta configurar la asistencia. Ejecuta database/06_asistencia.sql y database/07_asistencia_biometrica.sql en Supabase.');
+      if ((error.code === '42703' || error.code === 'PGRST204') && error.message?.includes('personal_id')) throw new Error('Falta habilitar asistencia para empleados sin cuenta. Ejecuta database/25_personal_sin_cuenta.sql en Supabase.');
       if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta el campo de hora de salida. Ejecuta database/08_salida_asistencia.sql en Supabase.');
       throw new Error(error.code === '42501' ? 'Supabase no permite consultar las asistencias desde el administrador. Revisa las políticas del script 06.' : error.message);
     }
@@ -54,18 +55,24 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
       throw new Error(finesError.message);
     }
     const fineByAttendanceId = new Map((fines || []).map(fine => [fine.asistencia_id, fine]));
-    const ids = [...new Set(entries.map(entry => entry.empleado_id))];
+    const ids = [...new Set(entries.map(entry => entry.empleado_id).filter((id): id is string => Boolean(id)))];
     const { data: profiles, error: profilesError } = await db.from('perfiles').select('id,nombre,apellido,rol,sucursal_id').in('id', ids);
     if (profilesError) throw new Error(profilesError.message);
     const byId = new Map((profiles || []).map(profile => [profile.id, profile]));
+    const personalIds = [...new Set(entries.map(entry => entry.personal_id).filter((id): id is string => Boolean(id)))];
+    const { data: staff, error: staffError } = personalIds.length
+      ? await db.from('personal_operativo').select('id,nombre,rol,sucursal_id').in('id', personalIds)
+      : { data: [], error: null };
+    if (staffError) throw new Error(staffError.message);
+    const dataPersonal = new Map((staff || []).map(person => [person.id, person]));
     return { records: entries.map(entry => {
       const profile = byId.get(entry.empleado_id);
       return {
         id: entry.id,
-        employeeId: entry.empleado_id,
-        name: profile ? [profile.nombre, profile.apellido].filter(Boolean).join(' ').trim() || 'Sin nombre' : 'Usuario sin perfil',
-        role: profile?.rol || '—',
-        branch: profile?.sucursal_id || '',
+        employeeId: entry.empleado_id || entry.personal_id,
+        name: entry.personal_id ? (dataPersonal.get(entry.personal_id)?.nombre || 'Personal sin nombre') : profile ? [profile.nombre, profile.apellido].filter(Boolean).join(' ').trim() || 'Sin nombre' : 'Usuario sin perfil',
+        role: entry.personal_id ? (dataPersonal.get(entry.personal_id)?.rol || '—') : profile?.rol || '—',
+        branch: entry.personal_id ? (dataPersonal.get(entry.personal_id)?.sucursal_id || '') : profile?.sucursal_id || '',
         timestamp: entry.registrada_en,
         exitTimestamp: entry.salida_en || null,
         lateMinutes: fineByAttendanceId.get(entry.id)?.minutos_tarde || 0,
@@ -91,7 +98,7 @@ export async function createSystemUser(input: { name: string; surname: string; p
     const password = clean(input.password, 128, 'la contraseña', true);
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Escribe un correo válido.');
     if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
-    if (!['Administrador','Supervisor','Cajero','Cocinero','Mesero','Repartidor','Limpieza'].includes(input.role)) throw new Error('Selecciona un rol permitido.');
+    if (!['Administrador','Cajero'].includes(input.role)) throw new Error('Solo puedes crear cuentas del sistema para Administrador o Cajero.');
     const branch = clean(input.branch, 36, 'la sucursal');
     if (branch && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(branch)) throw new Error('Selecciona una sucursal válida.');
     if (branch) {
@@ -113,6 +120,25 @@ export async function createSystemUser(input: { name: string; surname: string; p
     if (profileError) throw new Error(`La cuenta se creó en Auth, pero no se pudo guardar el rol. Actualiza usuarios y edita el perfil. ${friendly(profileError)}`);
     return { ok: true, data: await readData(db, user.id), message: created.user.identities?.length === 0 ? 'Cuenta creada.' : 'Usuario creado. Si Supabase solicita confirmar el correo, recibirá un enlace para activar su acceso.' };
   } catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'No se pudo crear el usuario.' }; }
+}
+
+export async function saveEmployeeFaceTemplate(personalId: string, descriptor: number[], consent: boolean): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const { db } = await requireAdmin();
+    if (consent !== true) throw new Error('Hace falta la autorización para guardar la plantilla facial del empleado.');
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(personalId) || !Array.isArray(descriptor) || descriptor.length !== 1024 || !descriptor.every(value => Number.isFinite(value) && Math.abs(value) <= 10)) throw new Error('Los datos del rostro no son válidos.');
+    const { data: employee, error: employeeError } = await db.from('personal_operativo').select('id,activo,rol').eq('id', personalId).maybeSingle();
+    if (employeeError || !employee || !employee.activo || !['Supervisor','Cocinero','Mesero','Repartidor','Limpieza'].includes(employee.rol)) throw new Error('El empleado no está activo o no pertenece al personal operativo.');
+    const { data: existing, error: existingError } = await db.from('plantillas_faciales').select('id').eq('personal_id', personalId).maybeSingle();
+    if (existingError) throw new Error('Falta habilitar el almacenamiento facial para empleados. Ejecuta database/25_personal_sin_cuenta.sql en Supabase.');
+    const result = existing
+      ? await db.from('plantillas_faciales').update({ descriptor }).eq('id', existing.id).select('id').single()
+      : await db.from('plantillas_faciales').insert({ personal_id: personalId, descriptor }).select('id').single();
+    if (result.error) throw new Error(result.error.code === '42501' ? 'Supabase no permitió guardar el rostro. Ejecuta database/25_personal_sin_cuenta.sql en Supabase.' : result.error.message);
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'No se pudo guardar la plantilla facial.' };
+  }
 }
 
 export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Promise<{ ok: boolean; data?: Data; error?: string; warning?: string }> {
@@ -210,7 +236,7 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
         break;
       }
       case 'stock': await write('insumos', { nombre: str('name'), sucursal_id: uuid('branch'), cantidad: num('quantity', true), minimo: num('minimum', true), unidad: choice('unit', ['unidades','kg','litros','paquetes']) }); break;
-      case 'employees': await write('personal_operativo', { nombre: str('name'), rol: choice('role', ['Administrador','Supervisor','Cajero','Cocinero','Mesero','Repartidor','Limpieza']), sucursal_id: uuid('branch'), telefono: str('phone', true), activo: bool('active') }); break;
+      case 'employees': await write('personal_operativo', { nombre: str('name'), rol: choice('role', ['Supervisor','Cocinero','Mesero','Repartidor','Limpieza']), sucursal_id: uuid('branch'), telefono: str('phone', true), activo: bool('active') }); break;
       case 'suppliers': await write('proveedores', { nombre: str('name'), contacto: str('contact', true), telefono: str('phone', true), nit: str('nit', true), activo: bool('active') }); break;
       case 'snackStocks': await write('stock_snacks', { producto_id: uuid('product'), sucursal_id: uuid('branch'), cantidad: num('quantity', true, true), minimo: num('minimum', true, true) }); break;
       case 'beverageStocks': {
@@ -227,7 +253,7 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
       case 'notices': await write('comunicados', { titulo: str('title'), mensaje: str('body'), sucursal_id: r.branch === 'all' ? null : uuid('branch'), prioridad: choice('priority', ['Normal','Importante','Urgente']), publicado: bool('active'), fecha: date('date') }); break;
       case 'users': {
         if (op.create) throw new Error('Crea la cuenta en Supabase → Authentication → Users. Después actualiza esta pantalla para asignarle sucursal y permisos.');
-        const id = uuid('id'); const role = choice('role', ['Administrador','Supervisor','Cajero','Cocinero','Mesero','Repartidor','Limpieza']); const active = bool('active');
+        const id = uuid('id'); const role = choice('role', ['Administrador','Cajero']); const active = bool('active');
         if (id === user.id && (role !== 'Administrador' || !active)) throw new Error('No puedes quitarte el acceso de administrador desde tu propia sesión.');
         const { error } = await db.from('perfiles').update({ nombre: str('name'), apellido: '', correo_contacto: str('email'), sucursal_id: uuid('branch', true), rol: role, activo: active }).eq('id', id).select('id').single();
         if (error) throw new Error(friendly(error)); break;

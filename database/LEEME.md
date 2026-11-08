@@ -31,7 +31,8 @@ No hace falta compartir tu contraseña de Supabase ni pegar una clave `secret` o
 | Insumos | `insumos`, `alertas_stock` |
 | Proveedores / Compras | `proveedores`, `compras` |
 | Usuarios del Sistema / Mi Perfil | `perfiles`, relacionados con `auth.users` |
-| Asistencia | `asistencias`, relacionada con `perfiles` |
+| Empleados | `personal_operativo` (personal operativo sin credenciales) |
+| Asistencia | `asistencias`, relacionada con `perfiles` o `personal_operativo` |
 | Usuarios del Sistema / Pagos al Personal | `perfiles`, `personal_operativo`, `pagos_personal` |
 | Ingreso / Egreso | `movimientos_financieros` |
 | Sucursales / Configuración | `sucursales`, `configuracion` |
@@ -96,9 +97,11 @@ Pruebas: npm test incluye validación, subtotales y agrupación del historial. n
 
 ## Roles y registro biométrico de asistencia
 
-Ejecuta `05_roles_usuarios.sql` para habilitar Supervisor, Cocinero, Mesero, Repartidor y Limpieza como roles de usuario. Ejecuta `06_asistencia.sql` para crear la tabla de asistencia y, después, `07_asistencia_biometrica.sql` para guardar plantillas faciales, permitir asistencias sin foto y bloquear nuevas cargas de imágenes. Ejecuta también `08_salida_asistencia.sql` para guardar la hora de salida al cerrar sesión y mostrarla en el apartado de asistencia del administrador. El personal activo, incluido el Cajero, pasa por `/asistencia` después de iniciar sesión; luego el Cajero continúa al monto de apertura de caja. La primera vez se pide permiso explícito y se guarda una plantilla numérica del rostro; las próximas entradas comparan contra esa plantilla y guardan fecha y hora sin una foto nueva. Los pasos de frente, derecha y regreso al frente comprueban movimiento de la cabeza. La plantilla está aislada por cuenta. Administrador conserva acceso al panel.
+Ejecuta `05_roles_usuarios.sql` para que la base admita los puestos operativos; ejecutarlo no implica que esos puestos tengan que recibir cuentas de acceso. Ejecuta `06_asistencia.sql` para crear asistencia, `07_asistencia_biometrica.sql` para permitir plantillas faciales sin fotos por marcación y `08_salida_asistencia.sql` para guardar la hora de salida al cerrar sesión de cuentas antiguas. Con el kiosco actual, el personal operativo se registra en **Empleados** y marca en `/asistencia` sin iniciar sesión. El Cajero conserva su cuenta y su plantilla facial, marca en la misma tablet y luego entra al punto de venta. Las plantillas guardan un descriptor numérico, no una foto de cada marcación. Administrador conserva acceso al panel.
 
 Para que las cuentas de usuario aparezcan en el selector de Pagos al Personal, ejecuta `09_usuarios_personal_nomina.sql`. Vincula las cuentas existentes y sincroniza nuevas cuentas con sucursal asignada al directorio interno de nómina. Las cuentas y sus sucursales se administran desde Usuarios del Sistema. Ejecuta también `10_pago_personal_formulario.sql` para registrar pagos vinculados a una cuenta o con un nombre manual, elegir tipo de pago, estado, descripción y observaciones.
+
+En **Usuarios del Sistema** solo se crean cuentas de acceso para Administrador y Cajero. Registra Cocinero, Mesero, Repartidor, Limpieza y Supervisor en **Empleados**; esos registros no necesitan correo ni contraseña. Para que la tablet pueda reconocerlos, usa **Registrar rostro** en su fila y confirma que la persona autoriza guardar su plantilla biométrica numérica. No se guardan fotografías de las marcaciones.
 
 ## Punto de venta del cajero
 
@@ -121,3 +124,5 @@ Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar
 Para configurar una hora de entrada y una tolerancia generales para todos los empleados, ejecuta `20_tiempo_asistencia_general.sql` en Supabase. El apartado **Tiempo asistencia** guarda un único horario global para el personal activo, incluidos cajeros y cocineros.
 
 Para activar multas automáticas por tardanza, ejecuta `21_multas_asistencia.sql` después de las migraciones 20 y 06. Define el monto desde **Tiempo asistencia**; cada marcación posterior a la hora de entrada más la tolerancia crea una multa pendiente y muestra los minutos tarde en **Asistencia**. Con multa desactivada, el sistema registra los minutos tarde sin crear un monto a cobrar.
+
+Para que el kiosco de `/asistencia` también identifique personal sin cuenta y conserve la marcación facial del Cajero, ejecuta `25_personal_sin_cuenta.sql` después de `21_multas_asistencia.sql` y `24_asistencia_kiosco.sql`. La migración conserva las asistencias y plantillas existentes, y permite asociar nuevos registros a `personal_operativo`. El Administrador registra los rostros desde **Empleados**; los Cajeros conservan la plantilla de su cuenta y marcan en la misma tablet. Después de ejecutar el script, actualiza la página.
