@@ -52,6 +52,29 @@
 .app-shell .nav-link.active svg { color: #fff; }
 .app-shell .active-dot { background: white; }
 .app-shell .sidebar-bottom { padding-top: 18px; }
+.app-shell .sidebar-bottom { display:flex; flex-direction:column; gap:11px; }
+.app-shell .sidebar-install-button { width:100%; display:flex; align-items:center; gap:10px; padding:9px 10px; border:1px solid #ffffff1b; border-radius:10px; color:#fff; background:#ffffff08; text-align:left; transition:background .18s ease,border-color .18s ease,transform .18s ease; }
+.app-shell .sidebar-install-button:hover { border-color:#ed1c2e80; background:#ed1c2e1b; transform:translateY(-1px); }
+.app-shell .sidebar-install-icon { display:grid; width:34px; height:34px; flex:0 0 34px; place-items:center; border:1px solid #ed1c2e66; border-radius:9px; color:#fff; background:#ed1c2e; }
+.app-shell .sidebar-install-button>span:last-child { min-width:0; }
+.app-shell .sidebar-install-button strong,.app-shell .sidebar-install-button small { display:block; }
+.app-shell .sidebar-install-button strong { font-size:11px; font-weight:750; }
+.app-shell .sidebar-install-button small { margin-top:3px; color:#c2b9b5; font-size:9px; line-height:1.35; }
+.app-shell .install-guide-dialog { width:min(440px,calc(100vw - 32px)); max-width:none; max-height:calc(100dvh - 32px); margin:auto; padding:0; overflow:auto; border:1px solid #e8e8ec; border-radius:16px; color:#121826; background:#fff; box-shadow:0 24px 80px #10182833; }
+.app-shell .install-guide-dialog::backdrop { background:#10182885; backdrop-filter:blur(3px); }
+.app-shell .install-guide-heading { display:flex; align-items:center; gap:12px; padding:20px; border-bottom:1px solid #e8e8ec; }
+.app-shell .install-guide-heading>div { min-width:0; flex:1; }
+.app-shell .install-guide-heading h2 { color:#121826; font-size:16px; }
+.app-shell .install-guide-heading p { margin-top:5px; color:#667085; font-size:11px; line-height:1.5; }
+.app-shell .install-guide-content { display:grid; gap:14px; padding:20px; color:#344054; font-size:13px; line-height:1.7; }
+.app-shell .install-guide-note { display:flex; align-items:flex-start; gap:8px; padding:10px 12px; border:1px solid #e8e8ec; border-radius:9px; color:#667085; background:#f8f9fb; font-size:11px; }
+.app-shell .install-guide-note svg { flex:none; margin-top:2px; color:#16a34a; }
+.app-shell .install-guide-actions { display:flex; justify-content:flex-end; padding:0 20px 20px; }
+.app-shell.light-mode .sidebar-install-button { border-color:#fee2e2; color:#121826; background:#fff; }
+.app-shell.light-mode .sidebar-install-button:hover { border-color:#fca5a5; background:#fff7f7; }
+.app-shell.light-mode .sidebar-install-icon { border-color:#e30613; color:#fff; background:#e30613; }
+.app-shell.light-mode .sidebar-install-button small { color:#667085; }
+@media(max-height:720px) and (min-width:761px) { .app-shell .sidebar-bottom { gap:8px; padding-top:8px; }.app-shell .sidebar-install-button { padding:7px 9px; }.app-shell .sidebar-install-icon { width:30px; height:30px; flex-basis:30px; } }
 .app-shell .sidebar-promo {
   position: relative;
   min-height: 156px;
