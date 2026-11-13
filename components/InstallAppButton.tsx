@@ -8,6 +8,10 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
+type WindowWithInstallPrompt = Window & {
+  __pollosRolyInstallPrompt?: InstallPromptEvent;
+};
+
 export default function InstallAppButton() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
@@ -28,11 +32,18 @@ export default function InstallAppButton() {
       event.preventDefault();
       setInstallPrompt(event as InstallPromptEvent);
     };
+    const onCapturedInstallPrompt = () => {
+      const prompt = (window as WindowWithInstallPrompt).__pollosRolyInstallPrompt;
+      if (prompt) setInstallPrompt(prompt);
+    };
     const onInstalled = () => { setInstalled(true); setInstallPrompt(null); };
     window.addEventListener('beforeinstallprompt', onInstallPrompt);
+    window.addEventListener('pollosrolyinstallprompt', onCapturedInstallPrompt);
     window.addEventListener('appinstalled', onInstalled);
+    onCapturedInstallPrompt();
     return () => {
       window.removeEventListener('beforeinstallprompt', onInstallPrompt);
+      window.removeEventListener('pollosrolyinstallprompt', onCapturedInstallPrompt);
       window.removeEventListener('appinstalled', onInstalled);
     };
   }, []);
@@ -43,16 +54,18 @@ export default function InstallAppButton() {
   }, [guideOpen]);
 
   async function downloadApp() {
-    if (!installPrompt) { setGuideOpen(true); return; }
+    const prompt = installPrompt ?? (window as WindowWithInstallPrompt).__pollosRolyInstallPrompt ?? null;
+    if (!prompt) { setGuideOpen(true); return; }
     try {
-      await installPrompt.prompt();
-      const choice = await installPrompt.userChoice;
+      await prompt.prompt();
+      const choice = await prompt.userChoice;
       if (choice.outcome === 'accepted') setInstalled(true);
       setGuideOpen(true);
     } catch {
       setGuideOpen(true);
     } finally {
       setInstallPrompt(null);
+      (window as WindowWithInstallPrompt).__pollosRolyInstallPrompt = undefined;
     }
   }
 
