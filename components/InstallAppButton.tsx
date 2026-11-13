@@ -48,6 +48,9 @@ export default function InstallAppButton() {
       await installPrompt.prompt();
       const choice = await installPrompt.userChoice;
       if (choice.outcome === 'accepted') setInstalled(true);
+      setGuideOpen(true);
+    } catch {
+      setGuideOpen(true);
     } finally {
       setInstallPrompt(null);
     }
@@ -56,7 +59,7 @@ export default function InstallAppButton() {
   return <>
     <button type="button" className="sidebar-install-button" onClick={() => void downloadApp()}>
       <span className="sidebar-install-icon"><Download size={17} /></span>
-      <span><strong>Descargar</strong><small>Instalar en este dispositivo</small></span>
+      <span><strong>{installed ? 'Instalada' : 'Descargar'}</strong><small>{installed ? 'Pollos Roly en este dispositivo' : 'Instalar en este dispositivo'}</small></span>
     </button>
     <dialog ref={dialog} className="install-guide-dialog" onCancel={event => { event.preventDefault(); setGuideOpen(false); }} onClick={event => { if (event.target === event.currentTarget) setGuideOpen(false); }}>
       <div className="install-guide-heading">
@@ -65,7 +68,7 @@ export default function InstallAppButton() {
         <button className="icon-button" type="button" onClick={() => setGuideOpen(false)} aria-label="Cerrar"><X size={18} /></button>
       </div>
       <div className="install-guide-content">
-        {platform === 'apple-mobile' ? <p><b>En iPhone o iPad:</b> abre esta página en Safari, toca <b>Compartir</b> y elige <b>Agregar a pantalla de inicio</b>.</p> : platform === 'mac' ? <p><b>En Mac:</b> abre Pollos Roly en Safari y elige <b>Archivo → Añadir al Dock</b>. En Chrome o Edge, usa el menú del navegador y elige <b>Instalar Pollos Roly</b>.</p> : <p><b>En Chrome o Edge:</b> abre el menú del navegador y elige <b>Instalar Pollos Roly</b> o <b>Agregar a pantalla principal</b>.</p>}
+        {installed ? <p>La instalación fue aceptada. Busca <b>Pollos Roly</b> en el menú de aplicaciones o en la pantalla de inicio de tu dispositivo.</p> : platform === 'apple-mobile' ? <p><b>En iPhone o iPad:</b> abre esta página en Safari, toca <b>Compartir</b> y elige <b>Agregar a pantalla de inicio</b>.</p> : platform === 'mac' ? <p><b>En Mac:</b> abre Pollos Roly en Safari y elige <b>Archivo → Añadir al Dock</b>. En Chrome o Edge, usa el menú del navegador y elige <b>Instalar Pollos Roly</b>.</p> : <p><b>En Chrome o Edge:</b> abre el menú del navegador y elige <b>Instalar Pollos Roly</b> o <b>Agregar a pantalla principal</b>. Si no aparece esa opción, actualiza la página después de conectarte a internet y vuelve a intentarlo.</p>}
         <p className="install-guide-note"><Check size={16} /> La aplicación instalada necesita conexión a internet para sincronizar con el sistema.</p>
       </div>
       <div className="install-guide-actions"><button className="button primary" type="button" onClick={() => setGuideOpen(false)}>Entendido</button></div>

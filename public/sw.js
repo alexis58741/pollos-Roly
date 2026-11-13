@@ -1,12 +1,20 @@
-const OFFLINE_PAGE = `<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sin conexión · Pollos Roly</title><body style="font:16px system-ui,sans-serif;background:#f8f9fb;color:#121826;padding:12vh 8vw;text-align:center"><h1>Sin conexión</h1><p>Conéctate a internet para usar Pollos Roly y sincronizar tus datos.</p></body></html>`;
+const CACHE_NAME = 'pollos-roly-shell-v1';
+const OFFLINE_URL = '/offline.html';
 
-self.addEventListener('install', event => event.waitUntil(self.skipWaiting()));
+self.addEventListener('install', event => event.waitUntil((async () => {
+  const cache = await caches.open(CACHE_NAME);
+  await cache.add(OFFLINE_URL);
+  await self.skipWaiting();
+})()));
 self.addEventListener('activate', event => event.waitUntil(self.clients.claim()));
 self.addEventListener('fetch', event => {
   const request = event.request;
-  if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
-  event.respondWith(fetch(request).catch(() => {
-    if (request.mode === 'navigate') return new Response(OFFLINE_PAGE, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
-    return Response.error();
-  }));
+  if (request.method !== 'GET' || request.mode !== 'navigate' || new URL(request.url).origin !== self.location.origin) return;
+  event.respondWith((async () => {
+    try {
+      return await fetch(request);
+    } catch {
+      return (await caches.match(OFFLINE_URL)) || new Response('<!doctype html><html lang="es"><meta charset="utf-8"><title>Sin conexión · Pollos Roly</title><body><h1>Sin conexión</h1><p>Conéctate a internet para sincronizar Pollos Roly.</p></body></html>', { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+  })());
 });
