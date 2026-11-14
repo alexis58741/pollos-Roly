@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
-import { ArrowDownUp, Ban, Bell, ChefHat, Check, CircleDollarSign, Clock3, ConciergeBell, Drumstick, Flame, Grid2X2, History, LogOut, Minus, Package, Pencil, Plus, Popcorn, Printer, QrCode, RefreshCw, Search, ShoppingBag, Store, CupSoda, Wallet, X } from 'lucide-react';
+import { ArrowDownUp, Ban, Bell, ChefHat, Check, CircleDollarSign, Clock3, ConciergeBell, Drumstick, Flame, Grid2X2, History, LogOut, Minus, Package, Pencil, Plus, Popcorn, Printer, QrCode, RefreshCw, Search, ShoppingBag, Store, CupSoda, Wallet, X, Sun, Moon } from 'lucide-react';
 import ConfirmSignOutForm from './ConfirmSignOutForm';
 import BeverageAlerts from './BeverageAlerts';
+import InstallAppButton from './InstallAppButton';
 import { cancelCashierOrder, CashierNotice, CashierOrder, CashierProduct, CashierSnapshot, ChickenCustomization, closeCashierShift, loadCashierData, loadCashierNotices, openCashierShift, registerCashierSale, updateCashierOrder } from '../app/cajero/actions';
 import { productPhotoUrl } from '../lib/products';
 
@@ -18,6 +19,7 @@ const amountValue = (value: string) => Number(value.replace(',', '.')) || 0;
 const choiceSummary = (choice: ChickenCustomization) => `${choice.piece} ${choice.preparation}${choice.accompaniments.length ? ` · ${choice.accompaniments.join(', ')}` : ' · Sin acompañamientos'}`;
 
 export default function CashierApp() {
+  const [lightMode, setLightMode] = useState(true);
   const [data, setData] = useState<CashierSnapshot | null>(null);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
@@ -54,6 +56,7 @@ export default function CashierApp() {
     if (result.data) { setData(result.data); setError(''); }
     else setError(result.error || 'No se pudieron cargar los datos del cajero.');
   }, []);
+  useEffect(() => { try { setLightMode(window.localStorage.getItem('pollos-roly-cashier-theme') !== 'dark'); } catch {} }, []);
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
     let mounted = true;
@@ -276,8 +279,8 @@ export default function CashierApp() {
   const shift = data.shift;
   const noticeOverlay = activeNotice && <div className="cashier-notice-overlay" role="presentation" onClick={() => setActiveNotice(null)}><section className={`cashier-notice-popover priority-${activeNotice.priority.toLowerCase()}`} role="dialog" aria-modal="true" aria-labelledby="cashier-notice-title" onClick={event => event.stopPropagation()}><button className="cashier-notice-close" aria-label="Cerrar aviso" onClick={() => setActiveNotice(null)}><X size={18}/></button><span className="cashier-notice-kicker"><Bell size={15}/> AVISO DEL ADMINISTRADOR · {activeNotice.priority}</span><h2 id="cashier-notice-title">{activeNotice.title}</h2><p>{activeNotice.body}</p><small>Este aviso se cerrará automáticamente en 5 segundos.</small><div className="cashier-notice-progress" /></section></div>;
   const noticeControl = <div className="cashier-notice-area"><button type="button" className="cashier-bell-button" aria-label="Ver avisos" aria-expanded={noticePanelOpen} onClick={() => setNoticePanelOpen(open => !open)}><Bell className="cashier-bell" size={18}/>{notices.length > 0 && <span>{notices.length}</span>}</button>{noticePanelOpen && <section className="cashier-notice-list" aria-label="Avisos publicados"><header><strong>Avisos</strong><button type="button" aria-label="Cerrar avisos" onClick={() => setNoticePanelOpen(false)}><X size={16}/></button></header>{noticeError ? <p className="cashier-notice-empty">{noticeError}</p> : notices.length ? notices.map(notice => <button type="button" key={notice.id} className="cashier-notice-list-item" onClick={() => { setActiveNotice(notice); setNoticePanelOpen(false); }}><span className={`badge priority-${notice.priority.toLowerCase()}`}>{notice.priority}</span><strong>{notice.title}</strong><small>{notice.body}</small><time>{notice.date}</time></button>) : <p className="cashier-notice-empty">No hay avisos publicados para esta sucursal.</p>}</section>}</div>;
-  const header = <header className="cashier-header"><a className="cashier-brand" href="/cajero"><span className="cashier-brand-logo"><Image src="/images/logo-pollos-roly.png" alt="Pollos Roly" width={64} height={64} priority /></span><strong>Pollos Roly<small>PUNTO DE VENTA</small></strong></a><span className={`cashier-shift-pill ${shift ? 'is-open' : ''}`}><i />{shift ? 'Caja abierta' : 'Caja cerrada'}</span><div className="cashier-header-user"><span className="cashier-avatar">{data.profileName.slice(0, 1).toUpperCase()}</span><span>{data.profileName}<small>Cajero</small></span><span className="cashier-header-branch"><Store size={14}/>{data.branchName}</span>{noticeControl}<ConfirmSignOutForm><button className="button" aria-label="Cerrar sesión"><LogOut size={16} />Cerrar sesión</button></ConfirmSignOutForm></div></header>;
-  if (!shift) return <main className="cashier-page is-opening">
+  const header = <header className="cashier-header"><a className="cashier-brand" href="/cajero"><span className="cashier-brand-logo"><Image src="/images/logo-pollos-roly.png" alt="Pollos Roly" width={64} height={64} priority /></span><strong>Pollos Roly<small>PUNTO DE VENTA</small></strong></a><span className={`cashier-shift-pill ${shift ? 'is-open' : ''}`}><i />{shift ? 'Caja abierta' : 'Caja cerrada'}</span><InstallAppButton variant="cashier"/><button className="cashier-theme-button" onClick={() => setLightMode(value => { const next = !value; try { localStorage.setItem('pollos-roly-cashier-theme', next ? 'light' : 'dark'); } catch {} return next; })} aria-label={lightMode ? 'Activar modo oscuro' : 'Activar modo claro'} title={lightMode ? 'Modo oscuro' : 'Modo claro'}>{lightMode ? <Moon size={17}/> : <Sun size={17}/>}</button><div className="cashier-header-user"><span className="cashier-avatar">{data.profileName.slice(0, 1).toUpperCase()}</span><span>{data.profileName}<small>Cajero</small></span><span className="cashier-header-branch"><Store size={14}/>{data.branchName}</span>{noticeControl}<ConfirmSignOutForm><button className="button" aria-label="Cerrar sesión"><LogOut size={16} />Cerrar sesión</button></ConfirmSignOutForm></div></header>;
+  if (!shift) return <main className={`cashier-page is-opening ${lightMode ? 'cashier-light-mode' : ''}`}>
     {header}
     <BeverageAlerts products={data.products} branches={alertBranches} onTransferred={() => { void refresh(); }} />
     {noticeOverlay}
@@ -298,7 +301,7 @@ export default function CashierApp() {
     <footer className="cashier-footer">{data.businessName} · Punto de venta · {data.branchName}</footer>
   </main>;
 
-  return <main className="cashier-page">
+  return <main className={`cashier-page ${lightMode ? 'cashier-light-mode' : ''}`}>
     {header}
     <BeverageAlerts products={data.products} branches={alertBranches} onTransferred={() => { void refresh(); }} />
     {noticeOverlay}

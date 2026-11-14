@@ -18,6 +18,23 @@
 .cashier-page:not(.is-opening) .cashier-shift-pill.is-open{border-color:#b9f2c6;background:#e9f9ed;color:#137333}
 .cashier-page:not(.is-opening) .cashier-shift-pill i{background:#fef3c7}
 .cashier-page:not(.is-opening) .cashier-shift-pill.is-open i{background:#16a34a}
+.cashier-page .cashier-install-button{display:inline-flex;align-items:center;gap:7px;flex:none;padding:8px 12px;border:1px solid #ffffff66;border-radius:10px;color:#fff;background:#ffffff18;font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+.cashier-page .cashier-install-button:hover{background:#ffffff2b}
+.cashier-page .cashier-theme-button{display:grid;place-items:center;width:38px;height:38px;flex:none;border:1px solid #ffffff66;border-radius:50%;color:#fff;background:#ffffff18;cursor:pointer}
+.cashier-page .cashier-theme-button:hover{background:#ffffff2b}
+.cashier-page:not(.cashier-light-mode),.cashier-page:not(.cashier-light-mode) .cashier-sales-layout>.cashier-catalog,.cashier-page:not(.cashier-light-mode) .cashier-sales-side,.cashier-page:not(.cashier-light-mode) .cashier-cash-card{background:#111418;color:#f3f4f6}
+.cashier-page:not(.cashier-light-mode) .cashier-sales-layout>.cashier-catalog,.cashier-page:not(.cashier-light-mode) .cashier-sales-side,.cashier-page:not(.cashier-light-mode) .cashier-cash-card{border-color:#30343a}
+.cashier-page:not(.cashier-light-mode) .cashier-sales-layout p,.cashier-page:not(.cashier-light-mode) .cashier-cash-card p{color:#aeb5bf}
+.cashier-page .cashier-install-button .sidebar-install-icon{display:grid;place-items:center}
+.cashier-page .cashier-install-dialog{width:min(440px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 32px);margin:auto;padding:0;overflow:auto;border:1px solid #e8e8ec;border-radius:16px;color:#121826;background:#fff;box-shadow:0 24px 80px #10182833}
+.cashier-page .cashier-install-dialog::backdrop{background:#10182885;backdrop-filter:blur(3px)}
+.cashier-page .cashier-install-dialog .install-guide-heading{display:flex;align-items:center;gap:12px;padding:20px;border-bottom:1px solid #e8e8ec}
+.cashier-page .cashier-install-dialog .install-guide-heading>div{min-width:0;flex:1}
+.cashier-page .cashier-install-dialog .install-guide-heading h2{color:#121826;font-size:16px}
+.cashier-page .cashier-install-dialog .install-guide-heading p{margin-top:5px;color:#667085;font-size:11px;line-height:1.5}
+.cashier-page .cashier-install-dialog .install-guide-content{display:grid;gap:14px;padding:20px;color:#344054;font-size:13px;line-height:1.7}
+.cashier-page .cashier-install-dialog .install-guide-note{display:flex;align-items:flex-start;gap:8px;padding:10px 12px;border:1px solid #e8e8ec;border-radius:9px;color:#667085;background:#f8f9fb;font-size:11px}
+.cashier-page .cashier-install-dialog .install-guide-actions{display:flex;justify-content:flex-end;padding:0 20px 20px}
 .cashier-page:not(.is-opening) .cashier-avatar{width:38px;height:38px;flex-basis:38px;background:#ffffff28;color:#fff}
 .cashier-page:not(.is-opening) .cashier-header-user>span:nth-child(2),.cashier-page:not(.is-opening) .cashier-header-user>span:nth-child(2) small{color:#fff}
 .cashier-page:not(.is-opening) .cashier-header-branch{border-color:#ffffff55;color:#fff}

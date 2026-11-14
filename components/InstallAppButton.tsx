@@ -12,7 +12,7 @@ type WindowWithInstallPrompt = Window & {
   __pollosRolyInstallPrompt?: InstallPromptEvent;
 };
 
-export default function InstallAppButton() {
+export default function InstallAppButton({ variant = 'sidebar' }: { variant?: 'sidebar' | 'cashier' }) {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [guideOpen, setGuideOpen] = useState(false);
   const [installed, setInstalled] = useState(false);
@@ -70,11 +70,11 @@ export default function InstallAppButton() {
   }
 
   return <>
-    <button type="button" className="sidebar-install-button" onClick={() => void downloadApp()}>
+    <button type="button" className={variant === 'cashier' ? 'cashier-install-button' : 'sidebar-install-button'} onClick={() => void downloadApp()}>
       <span className="sidebar-install-icon"><Download size={17} /></span>
-      <span><strong>{installed ? 'Instalada' : 'Descargar'}</strong><small>{installed ? 'Pollos Roly en este dispositivo' : 'Instalar en este dispositivo'}</small></span>
+      <span><strong>{installed ? 'Instalada' : variant === 'cashier' ? 'Instalar' : 'Descargar'}</strong>{variant === 'sidebar' && <small>{installed ? 'Pollos Roly en este dispositivo' : 'Instalar en este dispositivo'}</small>}</span>
     </button>
-    <dialog ref={dialog} className="install-guide-dialog" onCancel={event => { event.preventDefault(); setGuideOpen(false); }} onClick={event => { if (event.target === event.currentTarget) setGuideOpen(false); }}>
+    <dialog ref={dialog} className={`install-guide-dialog${variant === 'cashier' ? ' cashier-install-dialog' : ''}`} onCancel={event => { event.preventDefault(); setGuideOpen(false); }} onClick={event => { if (event.target === event.currentTarget) setGuideOpen(false); }}>
       <div className="install-guide-heading">
         <span className="sidebar-install-icon"><Smartphone size={18} /></span>
         <div><h2>{installed ? 'Pollos Roly ya está instalada' : 'Instalar Pollos Roly'}</h2><p>Agrega un acceso directo como aplicación en tu dispositivo.</p></div>
