@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import { Camera, Check, CircleAlert, Clock3, LoaderCircle, UserRound } from 'lucide-react';
 import { enrollFaceAndMarkAttendance, markAttendance } from '../app/asistencia/actions';
 
@@ -26,6 +27,7 @@ function loadHumanLibrary(): Promise<new (config: object) => HumanInstance> {
 }
 
 export default function AttendanceCapture({ enrollmentName, enrollmentRole }: { enrollmentName?: string; enrollmentRole?: string }) {
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const humanRef = useRef<HumanInstance | null>(null);
@@ -102,6 +104,11 @@ export default function AttendanceCapture({ enrollmentName, enrollmentRole }: { 
         const response = enrollmentName ? await enrollFaceAndMarkAttendance(form) : await markAttendance(form);
         if (response.error) { setError(response.error); setMessage(''); }
         else {
+          if (response.redirectTo === '/cajero') {
+            router.replace('/cajero');
+            router.refresh();
+            return;
+          }
           setEmployee({ name: response.name || 'Empleado', role: response.role || 'Personal', registeredAt: response.registeredAt || new Date().toISOString(), alreadyMarked: Boolean(response.alreadyMarked) });
           setSaved(true); setMessage('');
         }

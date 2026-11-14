@@ -2,6 +2,7 @@
 
 import { createClient } from '../../lib/supabase/server';
 import { revalidatePath } from 'next/cache';
+import { localDate } from '../../lib/data';
 
 const EMBEDDING_SIZE = 1024;
 
@@ -16,6 +17,7 @@ export type KioskAttendanceResult = {
   role?: string;
   registeredAt?: string;
   alreadyMarked?: boolean;
+  redirectTo?: '/cajero';
 };
 
 /**
@@ -41,12 +43,24 @@ export async function markAttendance(form: FormData): Promise<KioskAttendanceRes
     revalidatePath('/asistencia');
     revalidatePath('/admin/asistencia');
     revalidatePath('/cajero');
+    let redirectTo: '/cajero' | undefined;
+    if (result.employee_role === 'Cajero') {
+      const { data: { user } } = await db.auth.getUser();
+      if (user) {
+        const [{ data: profile }, { data: attendance }] = await Promise.all([
+          db.from('perfiles').select('rol,activo').eq('id', user.id).maybeSingle(),
+          db.from('asistencias').select('id').eq('empleado_id', user.id).eq('fecha', localDate()).maybeSingle(),
+        ]);
+        if (profile?.activo && profile.rol === 'Cajero' && attendance) redirectTo = '/cajero';
+      }
+    }
     return {
       success: true,
       name: result.employee_name,
       role: result.employee_role,
       registeredAt: result.registered_at,
       alreadyMarked: Boolean(result.already_marked),
+      redirectTo,
     };
   } catch {
     return { error: 'No se pudo conectar con el sistema de asistencia. Inténtalo de nuevo.' };
