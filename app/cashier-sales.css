@@ -29,6 +29,8 @@
 .cashier-page:not(.is-opening) .cashier-cash-heading .eyebrow{margin-bottom:4px;color:#ff2635;font-size:8px;letter-spacing:1.5px}
 .cashier-page:not(.is-opening) .cashier-sales-heading>div:last-child{display:flex;gap:8px}
 .cashier-page:not(.is-opening) .cashier-close-shortcut{background:linear-gradient(110deg,#e3091b,#b80011);border:1px solid #fa2738;color:#fff;box-shadow:0 8px 22px #e0002433}
+.cashier-page:not(.is-opening) .cashier-stock-open-button{border:1px solid #ff6b54;background:#fff;color:#a1121e;font-weight:800;box-shadow:0 5px 15px #0004}
+.cashier-page:not(.is-opening) .cashier-stock-open-button:hover{background:#fff4f2;color:#8f0c17}
 .cashier-page:not(.is-opening) .cashier-sales-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:stretch;min-width:0}
 .cashier-page:not(.is-opening) .cashier-sales-layout>.cashier-catalog,.cashier-page:not(.is-opening) .cashier-sales-side{min-width:0;padding:18px;border:1px solid #292d31;border-radius:20px;background:linear-gradient(145deg,#15191c,#101316);box-shadow:0 8px 24px #0005}
 .cashier-page:not(.is-opening) .cashier-sales-layout .cashier-catalog-heading h2,.cashier-page:not(.is-opening) .cashier-sales-layout .cashier-section-heading h2{display:flex;align-items:center;gap:9px;color:#f5f2eb;font-size:19px}
