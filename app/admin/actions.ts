@@ -84,7 +84,7 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
   }
 }
 
-export async function createSystemUser(input: { name: string; surname: string; phone: string; email: string; password: string; role: string; branch: string }): Promise<{ ok: boolean; data?: Data; error?: string; message?: string }> {
+export async function createSystemUser(input: { name: string; surname: string; phone: string; email: string; password: string; role: string; branch: string; weekdayDailyPay: number; weekendDailyPay: number }): Promise<{ ok: boolean; data?: Data; error?: string; message?: string }> {
   try {
     const { db, user } = await requireAdmin();
     const clean = (value: unknown, max: number, label: string, required = false) => {
@@ -96,6 +96,9 @@ export async function createSystemUser(input: { name: string; surname: string; p
     const phone = clean(input.phone, 30, 'el teléfono');
     const email = clean(input.email, 254, 'el correo', true).toLowerCase();
     const password = clean(input.password, 128, 'la contraseña', true);
+    const weekdayDailyPay = Number(input.weekdayDailyPay);
+    const weekendDailyPay = Number(input.weekendDailyPay);
+    for (const amount of [weekdayDailyPay, weekendDailyPay]) if (!Number.isFinite(amount) || amount < 0 || amount > 10000000 || Math.round(amount * 100) !== amount * 100) throw new Error('Escribe pagos diarios válidos en Bs.');
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('Escribe un correo válido.');
     if (password.length < 6) throw new Error('La contraseña debe tener al menos 6 caracteres.');
     if (!['Administrador','Cajero'].includes(input.role)) throw new Error('Solo puedes crear cuentas del sistema para Administrador o Cajero.');
@@ -116,7 +119,7 @@ export async function createSystemUser(input: { name: string; surname: string; p
       throw new Error(authError.message);
     }
     if (!created.user) throw new Error('Supabase no confirmó la creación de la cuenta.');
-    const { error: profileError } = await db.from('perfiles').update({ nombre: name, apellido: surname, telefono: phone, correo_contacto: email, rol: input.role, sucursal_id: branch || null, activo: true }).eq('id', created.user.id).select('id').single();
+    const { error: profileError } = await db.from('perfiles').update({ nombre: name, apellido: surname, telefono: phone, correo_contacto: email, rol: input.role, sucursal_id: branch || null, pago_diario_semana: weekdayDailyPay, pago_diario_fin_semana: weekendDailyPay, activo: true }).eq('id', created.user.id).select('id').single();
     if (profileError) throw new Error(`La cuenta se creó en Auth, pero no se pudo guardar el rol. Actualiza usuarios y edita el perfil. ${friendly(profileError)}`);
     return { ok: true, data: await readData(db, user.id), message: created.user.identities?.length === 0 ? 'Cuenta creada.' : 'Usuario creado. Si Supabase solicita confirmar el correo, recibirá un enlace para activar su acceso.' };
   } catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'No se pudo crear el usuario.' }; }
@@ -236,7 +239,7 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
         break;
       }
       case 'stock': await write('insumos', { nombre: str('name'), sucursal_id: uuid('branch'), cantidad: num('quantity', true), minimo: num('minimum', true), unidad: choice('unit', ['unidades','kg','litros','paquetes']) }); break;
-      case 'employees': await write('personal_operativo', { nombre: str('name'), rol: choice('role', ['Supervisor','Cocinero','Mesero','Repartidor','Limpieza']), sucursal_id: uuid('branch'), telefono: str('phone', true), activo: bool('active') }); break;
+      case 'employees': await write('personal_operativo', { nombre: str('name'), rol: choice('role', ['Supervisor','Cocinero','Mesero','Repartidor','Limpieza']), sucursal_id: uuid('branch'), telefono: str('phone', true), pago_diario_semana: num('weekdayDailyPay', true), pago_diario_fin_semana: num('weekendDailyPay', true), activo: bool('active') }); break;
       case 'suppliers': await write('proveedores', { nombre: str('name'), contacto: str('contact', true), telefono: str('phone', true), nit: str('nit', true), activo: bool('active') }); break;
       case 'snackStocks': await write('stock_snacks', { producto_id: uuid('product'), sucursal_id: uuid('branch'), cantidad: num('quantity', true, true), minimo: num('minimum', true, true) }); break;
       case 'beverageStocks': {
@@ -255,7 +258,7 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
         if (op.create) throw new Error('Crea la cuenta en Supabase → Authentication → Users. Después actualiza esta pantalla para asignarle sucursal y permisos.');
         const id = uuid('id'); const role = choice('role', ['Administrador','Cajero']); const active = bool('active');
         if (id === user.id && (role !== 'Administrador' || !active)) throw new Error('No puedes quitarte el acceso de administrador desde tu propia sesión.');
-        const { error } = await db.from('perfiles').update({ nombre: str('name'), apellido: '', correo_contacto: str('email'), sucursal_id: uuid('branch', true), rol: role, activo: active }).eq('id', id).select('id').single();
+        const { error } = await db.from('perfiles').update({ nombre: str('name'), apellido: '', correo_contacto: str('email'), sucursal_id: uuid('branch', true), rol: role, pago_diario_semana: num('weekdayDailyPay', true), pago_diario_fin_semana: num('weekendDailyPay', true), activo: active }).eq('id', id).select('id').single();
         if (error) throw new Error(friendly(error)); break;
       }
       case 'staffPayments': {

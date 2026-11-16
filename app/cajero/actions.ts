@@ -4,13 +4,14 @@ import { revalidatePath } from 'next/cache';
 import { requireCashier } from '../../lib/supabase/server';
 import { localDate } from '../../lib/data';
 
-export type ChickenCustomization = { piece: 'Pechuga' | 'Ala' | 'Pierna' | 'Contra'; preparation: 'Brasa' | 'Broaster'; accompaniments: ('Arroz' | 'Fideo' | 'Papa')[] };
+export type ChickenCustomization = { piece: 'Pechuga' | 'Ala' | 'Pierna' | 'Contra'; preparation: 'Espiedo' | 'Broaster'; accompaniments: ('Arroz' | 'Fideo' | 'Papa')[] };
 export type CashierProduct = { id: string; name: string; category: string; price: number; salePrice: number | null; onSale: boolean; photoPath: string; sortOrder: number; tracksStock: boolean; stock: number | null; requiresChoices: boolean; pieceType: 'leg_thigh' | 'breast_wing' | 'all' };
 export type CashierOrder = { id: string; ticket: string; customer: string; total: number; payment: string; payments: { method: string; amount: number }[]; status: string; date: string; items: string; lines: { productId: string; name: string; quantity: number; subtotal: number; customizations: ChickenCustomization[] }[] };
 export type CashierSnapshot = {
   profileName: string; branchId: string; branchName: string; businessName: string;
   products: CashierProduct[]; shift: { id: string; opening: number; openedAt: string; notes: string } | null;
   todayTotal: number; todayTickets: number; expectedCash: number; recentOrders: CashierOrder[];
+  pieceStock: { Broaster: { Ala: number; Pechuga: number; Contra: number; Pierna: number }; Espiedo: { Ala: number; Pechuga: number; Contra: number; Pierna: number } };
 };
 export type CashierNotice = { id: string; title: string; body: string; priority: string; date: string; createdAt: string };
 
@@ -47,6 +48,7 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
     ]);
     if (snackError) throw new Error(message(snackError, 'No se pudo consultar el stock de snacks.'));
     if (beverageError) throw new Error(message(beverageError, 'No se pudo consultar el stock de bebidas.'));
+    const { data: pieceRow } = await db.from('stock_presas').select('*').eq('sucursal_id', profile.sucursal_id).maybeSingle();
     const snacks = new Map((snackRows || []).map(s => [String(s.producto_id), Number(s.cantidad)]));
     const beverages = new Map((beverageRows || []).map(s => [String(s.producto_id), Number(s.cantidad_freezer) + Number(s.cantidad_almacen)]));
     const products: CashierProduct[] = (productResult.data || []).flatMap(p => {
@@ -96,9 +98,19 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
       products, shift: shiftResult.data ? { id: String(shiftResult.data.id), opening: Number(shiftResult.data.fondo_inicial), openedAt: String(shiftResult.data.apertura), notes: String(shiftResult.data.observaciones || '') } : null,
       todayTotal: orders.filter(o => o.estado !== 'Cancelado').reduce((sum, o) => sum + Number(o.total), 0), todayTickets: orders.filter(o => o.estado !== 'Cancelado').length,
       expectedCash: Number(shiftResult.data?.fondo_inicial || 0) + cashSales + movementBalance,
-      recentOrders,
+      recentOrders, pieceStock: { Broaster: { Ala: Number(pieceRow?.broaster_alas || 0), Pechuga: Number(pieceRow?.broaster_pechugas || 0), Contra: Number(pieceRow?.broaster_contras || 0), Pierna: Number(pieceRow?.broaster_piernas || 0) }, Espiedo: { Ala: Number(pieceRow?.espiedo_alas || 0), Pechuga: Number(pieceRow?.espiedo_pechugas || 0), Contra: Number(pieceRow?.espiedo_contras || 0), Pierna: Number(pieceRow?.espiedo_piernas || 0) } },
     } };
   } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo cargar el espacio del cajero.' }; }
+}
+
+export async function addWholeChickensToStock(broaster: number, espiedo: number) {
+  try {
+    const { db, profile } = await requireCashier();
+    const { error } = await db.rpc('agregar_pollos_stock', { p_sucursal: profile.sucursal_id, p_broaster: broaster, p_espiedo: espiedo });
+    if (error) throw new Error(message(error, 'No se pudo agregar el stock de pollos.'));
+    revalidatePath('/cajero');
+    return { ok: true as const };
+  } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo agregar el stock.' }; }
 }
 
 export async function loadCashierNotices(): Promise<{ notices?: CashierNotice[]; error?: string }> {

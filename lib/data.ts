@@ -1,7 +1,7 @@
 export type Product = { id: string; name: string; category: string; price: number; active: boolean; description?: string; salePrice?: number | null; onSale?: boolean; photoPath?: string; sortOrder?: number; requiresChoices?: boolean; pieceType?: 'leg_thigh' | 'breast_wing' | 'all' };
 export type Category = { id: string; name: string; active: boolean };
 export type Stock = { id: string; name: string; branch: string; quantity: number; minimum: number; unit: string };
-export type Employee = { id: string; name: string; role: string; branch: string; phone: string; active: boolean };
+export type Employee = { id: string; name: string; role: string; branch: string; phone: string; weekdayDailyPay: number; weekendDailyPay: number; active: boolean };
 export type Branch = { id: string; name: string; address: string; phone: string; active: boolean };
 export type Order = { id: string; ticket?: string; shift?: string; payments?: { method: string; amount: number }[]; customer: string; branch: string; total: number; payment: string; status: string; date: string; items: string };
 export type Supplier = { id: string; name: string; contact: string; phone: string; nit: string; active: boolean };
@@ -9,7 +9,7 @@ export type Purchase = { id: string; supplier: string; branch: string; stock: st
 export type SnackStock = { id: string; product: string; branch: string; quantity: number; minimum: number };
 export type BeverageStock = { id: string; product: string; branch: string; freezer: number; warehouse: number; minimum: number };
 export type Notice = { id: string; title: string; body: string; branch: string; priority: string; active: boolean; date: string };
-export type SystemUser = { id: string; name: string; email: string; branch: string; role: string; active: boolean };
+export type SystemUser = { id: string; name: string; email: string; branch: string; role: string; weekdayDailyPay: number; weekendDailyPay: number; active: boolean };
 export type StaffPayment = { id: string; employee: string; employeeName: string; branch: string; amount: number; concept: string; observations: string; paymentType: string; period: string; date: string; method: string; status: string };
 export type Finance = { id: string; type: string; amount: number; category: string; description: string; date: string; method: string; branch: string };
 export type Shift = { id: string; branch: string; cashier: string; opening: number; openedAt: string; closedAt: string | null; counted: number | null; expected?: number | null; notes: string };
@@ -43,9 +43,9 @@ export function initialData(): Data {
     ],
     branches: [{ id: 'b1', name: 'Sucursal Central', address: 'Dirección de ejemplo · por configurar', phone: '', active: true }],
     employees: [
-      { id: 'e1', name: 'Administrador de ejemplo', role: 'Administrador', branch: 'b1', phone: '', active: true },
-      { id: 'e2', name: 'Cajero de ejemplo', role: 'Cajero', branch: 'b1', phone: '', active: true },
-      { id: 'e3', name: 'Cocinero de ejemplo', role: 'Cocinero', branch: 'b1', phone: '', active: true },
+      { id: 'e1', name: 'Administrador de ejemplo', role: 'Administrador', branch: 'b1', phone: '', weekdayDailyPay: 0, weekendDailyPay: 0, active: true },
+      { id: 'e2', name: 'Cajero de ejemplo', role: 'Cajero', branch: 'b1', phone: '', weekdayDailyPay: 0, weekendDailyPay: 0, active: true },
+      { id: 'e3', name: 'Cocinero de ejemplo', role: 'Cocinero', branch: 'b1', phone: '', weekdayDailyPay: 0, weekendDailyPay: 0, active: true },
     ],
     stock: [
       { id: 'i1', name: 'Pollo fresco', branch: 'b1', quantity: 42, minimum: 15, unit: 'unidades' },
