@@ -64,25 +64,30 @@ grant execute on function public.agregar_pollos_stock(uuid,integer,integer) to a
 
 create or replace function roly_private.descontar_stock_presas()
 returns trigger language plpgsql security definer set search_path = '' as $$
-declare v_sucursal uuid; v_choice jsonb; v_piece text; v_prep text; v_column text;
+declare v_sucursal uuid; v_choice jsonb; v_piece text; v_prep text; v_column text; v_filas bigint;
 begin
   if tg_op='UPDATE' and coalesce(old.personalizacion,'[]'::jsonb)=coalesce(new.personalizacion,'[]'::jsonb) then return new; end if;
   select t.sucursal_id into v_sucursal from public.pedidos p join public.turnos_caja t on t.id=p.turno_id where p.id=new.pedido_id;
   if v_sucursal is null then return new; end if;
   if tg_op='UPDATE' then
     for v_choice in select x from jsonb_array_elements(coalesce(old.personalizacion,'[]'::jsonb)) x loop
-      v_piece:=v_choice->>'piece'; v_prep:=case when v_choice->>'preparation'='Broaster' then 'broaster' else 'espiedo' end;
+      v_piece:=v_choice->>'piece';
+      v_prep:=case v_choice->>'preparation' when 'Broaster' then 'broaster' when 'Espiedo' then 'espiedo' else null end;
+      if v_prep is null then raise exception 'La preparación anterior de la presa no es válida.'; end if;
       v_column:=v_prep||'_'||case v_piece when 'Ala' then 'alas' when 'Pechuga' then 'pechugas' when 'Contra' then 'contras' when 'Pierna' then 'piernas' else null end;
-      if v_column is not null then execute format('update public.stock_presas set %I=%I+1, actualizado_en=now() where sucursal_id=$1',v_column,v_column) using v_sucursal; end if;
+      if v_column is null then raise exception 'La presa anterior no es válida.'; end if;
+      execute format('update public.stock_presas set %I=%I+1, actualizado_en=now() where sucursal_id=$1',v_column,v_column) using v_sucursal;
     end loop;
   end if;
   for v_choice in select x from jsonb_array_elements(coalesce(new.personalizacion,'[]'::jsonb)) x loop
-    v_piece:=v_choice->>'piece'; v_prep:=case when v_choice->>'preparation'='Broaster' then 'broaster' else 'espiedo' end;
+    v_piece:=v_choice->>'piece';
+    v_prep:=case v_choice->>'preparation' when 'Broaster' then 'broaster' when 'Espiedo' then 'espiedo' else null end;
+    if v_prep is null then raise exception 'La preparación seleccionada no es válida.'; end if;
     v_column:=v_prep||'_'||case v_piece when 'Ala' then 'alas' when 'Pechuga' then 'pechugas' when 'Contra' then 'contras' when 'Pierna' then 'piernas' else null end;
-    if v_column is not null then
-      execute format('update public.stock_presas set %I=%I-1, actualizado_en=now() where sucursal_id=$1 and %I>0',v_column,v_column,v_column) using v_sucursal;
-      if not found then raise exception 'No hay suficiente stock % de la presa %.',v_prep,v_piece; end if;
-    end if;
+    if v_column is null then raise exception 'La presa seleccionada no es válida.'; end if;
+    execute format('update public.stock_presas set %I=%I-1, actualizado_en=now() where sucursal_id=$1 and %I>0',v_column,v_column,v_column) using v_sucursal;
+    get diagnostics v_filas = row_count;
+    if v_filas=0 then raise exception 'No hay suficiente stock % de la presa % en esta sucursal.',v_prep,v_piece; end if;
   end loop;
   return new;
 end $$;
