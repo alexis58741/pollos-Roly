@@ -430,8 +430,9 @@ export async function saveAttendanceTimeSettings(input: AttendanceTimeSettings):
     if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(input.time)) throw new Error('Indica una hora válida.');
     if (!Number.isInteger(input.toleranceMinutes) || input.toleranceMinutes < 0 || input.toleranceMinutes > 180) throw new Error('La tolerancia debe estar entre 0 y 180 minutos.');
     const { db } = await requireAdmin();
-    const { error } = await db.from('configuracion').update({ hora_entrada_asistencia: `${input.time}:00`, tolerancia_asistencia_minutos: input.toleranceMinutes }).eq('id', 1).select('id').single();
+    const { error } = await db.rpc('guardar_tiempo_asistencia', { p_hora: `${input.time}:00`, p_tolerancia: input.toleranceMinutes });
     if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') throw new Error('Falta habilitar el guardado del horario. Ejecuta database/31_guardar_tiempo_asistencia.sql en Supabase y vuelve a intentar.');
       if (error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta habilitar la multa automática. Ejecuta database/21_multas_asistencia.sql en Supabase.');
       throw new Error(friendly(error));
     }

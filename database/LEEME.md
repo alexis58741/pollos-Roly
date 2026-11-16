@@ -123,6 +123,8 @@ Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar
 
 Para configurar una hora de entrada y una tolerancia generales para todos los empleados, ejecuta `20_tiempo_asistencia_general.sql` en Supabase. El apartado **Tiempo asistencia** guarda un único horario global para el personal activo, incluidos cajeros y cocineros.
 
+Si el Administrador ve un error de permisos al guardar esa configuración, ejecuta `31_guardar_tiempo_asistencia.sql`. El guardado valida el rol de Administrador en la base de datos y funciona aunque el permiso de actualización directa de `configuracion` haya sido revocado.
+
 Para activar el registro de tardanzas y multas, ejecuta `21_multas_asistencia.sql` después de las migraciones 20 y 06. La hora y tolerancia se configuran desde **Tiempo asistencia**.
 
 Para que el kiosco de `/asistencia` también identifique personal sin cuenta y conserve la marcación facial del Cajero, ejecuta `25_personal_sin_cuenta.sql` después de `21_multas_asistencia.sql` y `24_asistencia_kiosco.sql`. La migración conserva las asistencias y plantillas existentes, y permite asociar nuevos registros a `personal_operativo`. El Administrador registra los rostros desde **Empleados**; los Cajeros conservan la plantilla de su cuenta y marcan en la misma tablet. Después de ejecutar el script, actualiza la página.
