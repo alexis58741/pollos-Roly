@@ -35,10 +35,32 @@ export default function StaffPaymentEditor({ data, payment, saving, error, cance
   const employeeOptions = data.employees.filter(item => item.active || item.id === employee);
   const branchOptions: Branch[] = data.branches.filter(item => item.active || item.id === branch);
   const manual = !employee;
+  const selectedEmployee = data.employees.find(item => item.id === employee);
   const numericGross = Number(grossAmount);
   const discount = preview ? Math.min(preview.amount, Math.max(0, numericGross || 0)) : 0;
   const netAmount = Math.max(0, Math.round((numericGross - discount) * 100) / 100);
   const canSave = !saving && (!employee || Boolean(preview)) && Number.isFinite(numericGross) && numericGross > 0;
+  const autoPayType = ['Pago Diario', 'Pago Semanal', 'Pago Quincenal', 'Pago Mensual'].includes(paymentType);
+  const payDescription = paymentType === 'Pago Diario'
+    ? `Tarifa diaria ${date && (new Date(`${date}T12:00:00`).getDay() === 0 || new Date(`${date}T12:00:00`).getDay() === 6) ? 'de fin de semana' : 'entre semana'}.`
+    : `Calculado con las tarifas diarias entre semana y de fin de semana para el período ${paymentType.toLowerCase()}.`;
+
+  useEffect(() => {
+    if (!selectedEmployee || payment) return;
+    if (!['Pago Diario', 'Pago Semanal', 'Pago Quincenal', 'Pago Mensual'].includes(paymentType)) return;
+    const end = new Date(`${date}T12:00:00`);
+    if (Number.isNaN(end.getTime())) return;
+    const days = paymentType === 'Pago Diario' ? 1 : paymentType === 'Pago Semanal' ? 7 : paymentType === 'Pago Quincenal' ? 15 : new Date(end.getFullYear(), end.getMonth() + 1, 0).getDate();
+    let total = 0;
+    for (let offset = 0; offset < days; offset++) {
+      const day = new Date(end);
+      if (paymentType === 'Pago Mensual') day.setDate(1 + offset);
+      else day.setDate(end.getDate() - offset);
+      const weekend = day.getDay() === 0 || day.getDay() === 6;
+      total += weekend ? selectedEmployee.weekendDailyPay : selectedEmployee.weekdayDailyPay;
+    }
+    setGrossAmount((Math.round(total * 100) / 100).toFixed(2));
+  }, [selectedEmployee, date, paymentType, payment]);
 
   useEffect(() => {
     if (!employee || payment) { setPreview(null); setPreviewError(''); setChecking(false); return; }
@@ -79,7 +101,7 @@ export default function StaffPaymentEditor({ data, payment, saving, error, cance
       <label>Nombre del Empleado *<input required maxLength={160} value={employeeName} readOnly={!manual} onChange={event => setEmployeeName(event.target.value)} placeholder="Ej: Juan Pérez" /></label>
       <label>Sucursal *<select required value={branch} disabled={!manual || Boolean(payment)} onChange={event => setBranch(event.target.value)}><option value="">Selecciona una sucursal</option>{branchOptions.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
       <label>Tipo de Pago *<select required value={paymentType} onChange={event => setPaymentType(event.target.value)}>{paymentTypes.map(item => <option key={item}>{item}</option>)}</select></label>
-      <label>Monto ganado bruto (Bs.) *<input required type="number" min="0.01" max="10000000" step="0.01" value={grossAmount} readOnly={Boolean(payment)} onChange={event => setGrossAmount(event.target.value)} placeholder="0.00" /></label>
+      <label>{employee && autoPayType ? 'Monto calculado (Bs.) *' : 'Monto ganado bruto (Bs.) *'}<input required type="number" min="0.01" max="10000000" step="0.01" value={grossAmount} readOnly={Boolean(payment) || Boolean(employee && autoPayType)} onChange={event => setGrossAmount(event.target.value)} placeholder="0.00" />{employee && <small>{autoPayType ? payDescription : 'Para bonos u horas extra, ingresa el monto manualmente.'}</small>}</label>
       <label>Fecha del Pago *<span className="staff-payment-date"><CalendarDays size={16} /><input required type="date" value={date} disabled={Boolean(payment)} onChange={event => setDate(event.target.value)} /></span></label>
       <label className={`staff-payment-status ${status === 'Pagado' ? 'is-paid' : ''}`}>Estado del Registro *<select value={status} onChange={event => setStatus(event.target.value)}><option value="Pagado">✅ Ya se entregó (Pagado)</option><option value="Pendiente">Pendiente de entrega</option></select></label>
       <label className="staff-payment-wide">Concepto / Descripción *<input required maxLength={500} value={concept} onChange={event => setConcept(event.target.value)} placeholder="Ej: Sueldo semanal, Horas extra, Bono por productividad…" /></label>
