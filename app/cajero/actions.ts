@@ -122,12 +122,16 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
 
 export async function addWholeChickensToStock(broaster: number, espiedo: number) {
   try {
+    const validQuantity = (value: number) => Number.isFinite(value) && value >= 0 && value <= 10000 && Number.isInteger(value * 2);
+    if (!validQuantity(broaster) || !validQuantity(espiedo) || broaster + espiedo < 0.5) {
+      throw new Error('Ingresa cantidades desde 0,5 y en incrementos de medio pollo.');
+    }
     const { db, profile, user } = await requireCashier();
     const { data: shift, error: shiftError } = await db.from('turnos_caja').select('id').eq('sucursal_id', profile.sucursal_id).eq('cajero_id', user.id).is('cierre', null).maybeSingle();
     if (shiftError || !shift) throw new Error('Abre una caja para registrar las presas de este turno.');
     const { error } = await db.rpc('agregar_pollos_stock', { p_turno: shift.id, p_broaster: broaster, p_espiedo: espiedo });
     if (error) throw new Error(error.code === 'PGRST202' || error.code === '42883'
-      ? `No se encontró agregar_pollos_stock(p_turno, p_broaster, p_espiedo). Ejecuta database/32_stock_presas_por_turno.sql en Supabase. Detalle: ${error.message || error.code}`
+      ? `No se encontró agregar_pollos_stock(p_turno, p_broaster, p_espiedo). Ejecuta database/33_medios_pollos.sql en Supabase. Detalle: ${error.message || error.code}`
       : message(error, 'No se pudo agregar el stock de pollos.'));
     revalidatePath('/cajero');
     return { ok: true as const };
