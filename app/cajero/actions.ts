@@ -59,8 +59,13 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
     ]);
     if (snackError) throw new Error(message(snackError, 'No se pudo consultar el stock de snacks.'));
     if (beverageError) throw new Error(message(beverageError, 'No se pudo consultar el stock de bebidas.'));
-    const { data: pieceRow, error: pieceStockError } = await db.from('stock_presas').select('*').eq('sucursal_id', profile.sucursal_id).maybeSingle();
-    if (pieceStockError) throw new Error(message(pieceStockError, 'No se pudo consultar el stock de presas.'));
+    const pieceRowResult = shiftResult.data
+      ? await db.from('stock_presas_turno').select('*').eq('turno_id', shiftResult.data.id).maybeSingle()
+      : { data: null, error: null };
+    if (pieceRowResult.error) throw new Error(pieceRowResult.error.code === '42P01' || pieceRowResult.error.code === 'PGRST205'
+      ? 'Falta actualizar el inventario de presas por caja. Ejecuta database/32_stock_presas_por_turno.sql en Supabase.'
+      : message(pieceRowResult.error, 'No se pudo consultar el stock de presas.'));
+    const pieceRow = pieceRowResult.data;
     const snacks = new Map((snackRows || []).map(s => [String(s.producto_id), Number(s.cantidad)]));
     const beverages = new Map((beverageRows || []).map(s => [String(s.producto_id), Number(s.cantidad_freezer) + Number(s.cantidad_almacen)]));
     const products: CashierProduct[] = (productResult.data || []).flatMap(p => {
@@ -117,10 +122,12 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
 
 export async function addWholeChickensToStock(broaster: number, espiedo: number) {
   try {
-    const { db, profile } = await requireCashier();
-    const { error } = await db.rpc('agregar_pollos_stock', { p_sucursal: profile.sucursal_id, p_broaster: broaster, p_espiedo: espiedo });
+    const { db, profile, user } = await requireCashier();
+    const { data: shift, error: shiftError } = await db.from('turnos_caja').select('id').eq('sucursal_id', profile.sucursal_id).eq('cajero_id', user.id).is('cierre', null).maybeSingle();
+    if (shiftError || !shift) throw new Error('Abre una caja para registrar las presas de este turno.');
+    const { error } = await db.rpc('agregar_pollos_stock', { p_turno: shift.id, p_broaster: broaster, p_espiedo: espiedo });
     if (error) throw new Error(error.code === 'PGRST202' || error.code === '42883'
-      ? `No se encontró agregar_pollos_stock(p_sucursal, p_broaster, p_espiedo). Verifica que ejecutaste database/26_stock_presas.sql. Detalle: ${error.message || error.code}`
+      ? `No se encontró agregar_pollos_stock(p_turno, p_broaster, p_espiedo). Ejecuta database/32_stock_presas_por_turno.sql en Supabase. Detalle: ${error.message || error.code}`
       : message(error, 'No se pudo agregar el stock de pollos.'));
     revalidatePath('/cajero');
     return { ok: true as const };
