@@ -123,13 +123,15 @@ Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar
 
 Para configurar una hora de entrada y una tolerancia generales para todos los empleados, ejecuta `20_tiempo_asistencia_general.sql` en Supabase. El apartado **Tiempo asistencia** guarda un único horario global para el personal activo, incluidos cajeros y cocineros.
 
-Para activar multas automáticas por tardanza, ejecuta `21_multas_asistencia.sql` después de las migraciones 20 y 06. Define el monto desde **Tiempo asistencia**; cada marcación posterior a la hora de entrada más la tolerancia crea una multa pendiente y muestra los minutos tarde en **Asistencia**. Con multa desactivada, el sistema registra los minutos tarde sin crear un monto a cobrar.
+Para activar el registro de tardanzas y multas, ejecuta `21_multas_asistencia.sql` después de las migraciones 20 y 06. La hora y tolerancia se configuran desde **Tiempo asistencia**.
 
 Para que el kiosco de `/asistencia` también identifique personal sin cuenta y conserve la marcación facial del Cajero, ejecuta `25_personal_sin_cuenta.sql` después de `21_multas_asistencia.sql` y `24_asistencia_kiosco.sql`. La migración conserva las asistencias y plantillas existentes, y permite asociar nuevos registros a `personal_operativo`. El Administrador registra los rostros desde **Empleados**; los Cajeros conservan la plantilla de su cuenta y marcan en la misma tablet. Después de ejecutar el script, actualiza la página.
 
 La migración `27_sueldo_y_multa_proporcional.sql` guardaba el sueldo mensual y fue reemplazada por el cálculo diario diferenciado de la migración 28. Si ya ejecutaste la 27, conserva sus datos; luego ejecuta también la 28.
 
-Para registrar cuánto gana cada persona por día entre semana y por día de fin de semana, ejecuta `28_pago_diario_multas.sql` después de `25_personal_sin_cuenta.sql`. En **Empleados** o al crear/editar una cuenta de Cajero ingresa ambas tarifas diarias en Bs. Para la multa automática, lunes a viernes usa el pago diario entre semana y sábado/domingo usa el pago diario de fin de semana; el valor por minuto es pago diario ÷ 8 ÷ 60, multiplicado por los minutos tarde después de la tolerancia. Se redondea el total final a centavos. Si la tarifa del día es cero, se usa el monto fijo configurado en **Tiempo asistencia**.
+Para registrar cuánto gana cada persona por día entre semana y por día de fin de semana, ejecuta `28_pago_diario_multas.sql` después de `25_personal_sin_cuenta.sql`. En **Empleados** o al crear/editar una cuenta de Cajero ingresa ambas tarifas diarias en Bs. La tarifa por minuto se calcula como pago diario ÷ 8 ÷ 60 y se multiplica por los minutos tarde después de la tolerancia; se redondea a centavos.
+
+Si ya ejecutaste la migración 28, ejecuta también `30_multa_segun_pago_diario.sql`. Esta elimina el monto fijo global: las nuevas tardanzas se calculan solo con el pago diario del empleado. Si no tiene una tarifa configurada para ese día, no se crea una multa.
 
 Para descontar las tardanzas pendientes al pagar a un empleado, ejecuta `29_descuentos_multa_pagos_personal.sql` después de `28_pago_diario_multas.sql`. Al seleccionar al empleado en **Pagos al Personal**, se muestran las multas pendientes hasta la fecha del pago y el monto neto. Al registrar, Supabase vuelve a calcular el descuento de forma atómica, lo resta del monto bruto y conserva el detalle por multa; si el pago no alcanza a cubrirlas todas, el saldo sigue pendiente para otro pago. Los pagos anteriores se conservan y quedan con descuento cero.
 
