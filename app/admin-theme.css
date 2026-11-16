@@ -277,6 +277,12 @@
 .app-shell .staff-payment-date { display: flex; align-items: center; gap: 9px; min-height: 47px; padding-left: 12px; border: 1px solid #e5e7eb; border-radius: 9px; color: #ed7028; }
 .app-shell .staff-payment-date input { min-height: 44px; border: 0; box-shadow: none; }
 .app-shell .staff-payment-date input:focus { box-shadow: none; }
+.app-shell .staff-payment-deduction { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px 16px; margin-top: 18px; padding: 16px 18px; border: 1px solid #f2d6c8; border-radius: 12px; background: #fff9f5; color: #33313a; }
+.app-shell .staff-payment-deduction>div:first-child { display: grid; gap: 4px; }
+.app-shell .staff-payment-deduction small { color: #737987; font-size: 11px; }
+.app-shell .staff-payment-deduction>strong { color: #d95324; font-size: 17px; }
+.app-shell .staff-payment-deduction .staff-payment-net { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #efdcd2; }
+.app-shell .staff-payment-net strong { color: #161b25; font-size: 19px; }
 .app-shell .staff-payment-hint { margin-top: 14px; color: #90877f; font-size: 10px; line-height: 1.6; }
 .app-shell .staff-payment-editor .error-banner { margin-top: 12px; }
 .app-shell .staff-payment-footer { position: sticky; bottom: 0; display: flex; justify-content: flex-end; gap: 12px; margin: 22px -27px 0; padding: 14px 27px 18px; border-top: 1px solid #eeece9; background: #fff; }

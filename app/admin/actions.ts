@@ -37,6 +37,29 @@ export async function loadAdminData(): Promise<{ data?: Data; error?: string }> 
 
 export type AttendanceRecord = { id: string; employeeId: string; name: string; role: string; branch: string; timestamp: string; exitTimestamp: string | null; lateMinutes: number; fineAmount: number };
 
+export type AttendanceDiscountPreview = { amount: number; count: number; minutes: number };
+
+export async function loadAttendanceDiscountPreview(employeeId: string, paymentDate: string): Promise<{ preview?: AttendanceDiscountPreview; error?: string }> {
+  try {
+    const { db } = await requireAdmin();
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(employeeId)) throw new Error('Selecciona un empleado válido.');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(paymentDate) || Number.isNaN(Date.parse(paymentDate))) throw new Error('Selecciona una fecha de pago válida.');
+    const { data: attendances, error: attendanceError } = await db.from('asistencias').select('id').or(`personal_id.eq.${employeeId},empleado_id.eq.${employeeId}`).lte('fecha', paymentDate);
+    if (attendanceError) {
+      if (attendanceError.code === '42703' || attendanceError.code === 'PGRST204') throw new Error('Falta habilitar asistencia para personal. Ejecuta database/25_personal_sin_cuenta.sql en Supabase.');
+      throw new Error(friendly(attendanceError));
+    }
+    if (!attendances?.length) return { preview: { amount: 0, count: 0, minutes: 0 } };
+    const { data: fines, error: fineError } = await db.from('multas_asistencia').select('monto,monto_descontado,minutos_tarde').in('asistencia_id', attendances.map(row => row.id)).eq('estado', 'Pendiente');
+    if (fineError) {
+      if (fineError.code === '42P01' || fineError.code === 'PGRST205' || fineError.code === '42703' || fineError.code === 'PGRST204') throw new Error('Falta habilitar los descuentos de tardanza en nómina. Ejecuta database/29_descuentos_multa_pagos_personal.sql en Supabase.');
+      throw new Error(friendly(fineError));
+    }
+    const pending = (fines || []).map(fine => ({ amount: Math.max(0, Number(fine.monto || 0) - Number(fine.monto_descontado || 0)), minutes: Number(fine.minutos_tarde || 0) })).filter(fine => fine.amount > 0);
+    return { preview: { amount: Math.round(pending.reduce((sum, fine) => sum + fine.amount, 0) * 100) / 100, count: pending.length, minutes: pending.reduce((sum, fine) => sum + fine.minutes, 0) } };
+  } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo calcular el descuento por tardanza.' }; }
+}
+
 export async function loadAttendanceRecords(date: string): Promise<{ records?: AttendanceRecord[]; error?: string }> {
   try {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T00:00:00Z`))) throw new Error('Selecciona una fecha válida.');
@@ -262,13 +285,19 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
         if (error) throw new Error(friendly(error)); break;
       }
       case 'staffPayments': {
-        const schemaCheck = await db.from('pagos_personal').select('nombre_empleado,tipo_pago,observaciones').limit(0);
-        if (schemaCheck.error && (schemaCheck.error.code === '42703' || schemaCheck.error.code === 'PGRST204')) throw new Error('Falta actualizar Pagos al Personal. Ejecuta database/10_pago_personal_formulario.sql en Supabase.');
+        const schemaCheck = await db.from('pagos_personal').select('nombre_empleado,tipo_pago,observaciones,monto_bruto,descuento_tardanza').limit(0);
+        if (schemaCheck.error && (schemaCheck.error.code === '42703' || schemaCheck.error.code === 'PGRST204')) throw new Error('Falta actualizar Pagos al Personal. Ejecuta database/10_pago_personal_formulario.sql y database/29_descuentos_multa_pagos_personal.sql en Supabase.');
         if (schemaCheck.error) throw new Error(friendly(schemaCheck.error));
         const employeeId = uuid('employee', true);
         const paymentDate = date('date');
         let employeeName = str('employeeName', true);
         let branchId = uuid('branch');
+        const grossAmount = num('grossAmount');
+        const paymentType = choice('paymentType', ['Pago Diario','Pago Semanal','Pago Quincenal','Pago Mensual','Horas Extra','Bono','Otro']);
+        const concept = str('concept');
+        const observations = str('observations', true);
+        const method = choice('method', ['Efectivo','QR','Tarjeta']);
+        const status = choice('status', ['Pendiente','Pagado']);
         if (employeeId) {
           const { data: employee, error } = await db.from('personal_operativo').select('nombre,sucursal_id,activo').eq('id', employeeId).maybeSingle();
           if (error || !employee || (op.create && !employee.activo)) throw new Error('Selecciona un empleado activo o escribe su nombre manualmente.');
@@ -276,19 +305,33 @@ export async function saveAdminMutation(op: Mutation, photoForm?: FormData): Pro
           branchId = employee.sucursal_id;
         } else if (!employeeName) throw new Error('Escribe el nombre del empleado.');
         if (employeeName.length > 160) throw new Error('El nombre del empleado admite hasta 160 caracteres.');
-        await write('pagos_personal', {
-          personal_id: employeeId,
-          nombre_empleado: employeeName,
-          sucursal_id: branchId,
-          tipo_pago: choice('paymentType', ['Pago Diario','Pago Semanal','Pago Quincenal','Pago Mensual','Horas Extra','Bono','Otro']),
-          monto: num('amount'),
-          concepto: str('concept'),
-          observaciones: str('observations', true),
-          periodo: `${paymentDate.slice(0, 7)}-01`,
-          fecha: paymentDate,
-          metodo: choice('method', ['Efectivo','QR','Tarjeta']),
-          estado: choice('status', ['Pendiente','Pagado']),
-        }); break;
+        if (op.create && employeeId) {
+          const { error } = await db.rpc('registrar_pago_personal_con_multas', { p_personal: employeeId, p_monto_bruto: grossAmount, p_fecha: paymentDate, p_tipo_pago: paymentType, p_concepto: concept, p_observaciones: observations, p_metodo: method, p_estado: status });
+          if (error) {
+            if (error.code === 'PGRST202' || error.code === '42883' || error.code === '42703' || error.code === 'PGRST204') throw new Error('Falta activar el descuento automático de tardanzas. Ejecuta database/29_descuentos_multa_pagos_personal.sql en Supabase y actualiza los datos.');
+            throw new Error(friendly(error));
+          }
+        } else {
+          const amount = op.create ? grossAmount : num('amount', true);
+          const discount = op.create ? 0 : num('lateFineDiscount', true);
+          const storedGross = op.create ? grossAmount : num('grossAmount');
+          await write('pagos_personal', {
+            personal_id: employeeId,
+            nombre_empleado: employeeName,
+            sucursal_id: branchId,
+            tipo_pago: paymentType,
+            monto_bruto: storedGross,
+            descuento_tardanza: discount,
+            monto: amount,
+            concepto,
+            observaciones,
+            periodo: `${paymentDate.slice(0, 7)}-01`,
+            fecha: paymentDate,
+            metodo: method,
+            estado: status,
+          });
+        }
+        break;
       }
       case 'finances': if (!op.create) throw new Error('Los movimientos contabilizados se corrigen con una contrapartida.'); else { await write('movimientos_financieros', { tipo: choice('type', ['Ingreso','Egreso']), sucursal_id: uuid('branch'), monto: num('amount'), categoria: str('category'), descripcion: str('description'), fecha: date('date'), metodo: choice('method', ['Efectivo','QR','Tarjeta']) }); break; }
       case 'purchases': if (op.create) await run('registrar_compra', { p_proveedor: uuid('supplier'), p_insumo: uuid('stock'), p_cantidad: num('quantity'), p_costo: num('unitCost'), p_fecha: date('date'), p_observaciones: str('notes', true) }); else { if (r.status !== 'Anulada') throw new Error('Una compra registrada solo puede anularse.'); await run('anular_compra', { p_compra: uuid('id') }); } break;
