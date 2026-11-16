@@ -59,7 +59,8 @@ export async function loadCashierData(): Promise<{ data?: CashierSnapshot; error
     ]);
     if (snackError) throw new Error(message(snackError, 'No se pudo consultar el stock de snacks.'));
     if (beverageError) throw new Error(message(beverageError, 'No se pudo consultar el stock de bebidas.'));
-    const { data: pieceRow } = await db.from('stock_presas').select('*').eq('sucursal_id', profile.sucursal_id).maybeSingle();
+    const { data: pieceRow, error: pieceStockError } = await db.from('stock_presas').select('*').eq('sucursal_id', profile.sucursal_id).maybeSingle();
+    if (pieceStockError) throw new Error(message(pieceStockError, 'No se pudo consultar el stock de presas.'));
     const snacks = new Map((snackRows || []).map(s => [String(s.producto_id), Number(s.cantidad)]));
     const beverages = new Map((beverageRows || []).map(s => [String(s.producto_id), Number(s.cantidad_freezer) + Number(s.cantidad_almacen)]));
     const products: CashierProduct[] = (productResult.data || []).flatMap(p => {

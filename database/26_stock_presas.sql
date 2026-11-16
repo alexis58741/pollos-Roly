@@ -14,8 +14,35 @@ create table if not exists public.stock_presas (
   espiedo_piernas integer not null default 0 check (espiedo_piernas >= 0),
   actualizado_en timestamptz not null default now()
 );
+-- También actualiza la tabla si ya existía con los cuatro contadores genéricos anteriores.
+alter table public.stock_presas add column if not exists broaster_alas integer not null default 0 check (broaster_alas >= 0);
+alter table public.stock_presas add column if not exists broaster_pechugas integer not null default 0 check (broaster_pechugas >= 0);
+alter table public.stock_presas add column if not exists broaster_contras integer not null default 0 check (broaster_contras >= 0);
+alter table public.stock_presas add column if not exists broaster_piernas integer not null default 0 check (broaster_piernas >= 0);
+alter table public.stock_presas add column if not exists espiedo_alas integer not null default 0 check (espiedo_alas >= 0);
+alter table public.stock_presas add column if not exists espiedo_pechugas integer not null default 0 check (espiedo_pechugas >= 0);
+alter table public.stock_presas add column if not exists espiedo_contras integer not null default 0 check (espiedo_contras >= 0);
+alter table public.stock_presas add column if not exists espiedo_piernas integer not null default 0 check (espiedo_piernas >= 0);
+alter table public.stock_presas add column if not exists actualizado_en timestamptz not null default now();
+alter table public.stock_presas add column if not exists preparacion_stock_migrada boolean not null default false;
+
+-- La versión anterior no distinguía preparación. Conserva sus piezas como stock Espiedo una sola vez.
+do $$ begin
+  if exists(select 1 from information_schema.columns where table_schema='public' and table_name='stock_presas' and column_name='alas')
+     and exists(select 1 from information_schema.columns where table_schema='public' and table_name='stock_presas' and column_name='pechugas')
+     and exists(select 1 from information_schema.columns where table_schema='public' and table_name='stock_presas' and column_name='contras')
+     and exists(select 1 from information_schema.columns where table_schema='public' and table_name='stock_presas' and column_name='piernas') then
+    execute 'update public.stock_presas set espiedo_alas=espiedo_alas+coalesce(alas,0), espiedo_pechugas=espiedo_pechugas+coalesce(pechugas,0), espiedo_contras=espiedo_contras+coalesce(contras,0), espiedo_piernas=espiedo_piernas+coalesce(piernas,0), preparacion_stock_migrada=true where not preparacion_stock_migrada';
+  else
+    update public.stock_presas set preparacion_stock_migrada=true where not preparacion_stock_migrada;
+  end if;
+end $$;
 alter table public.stock_presas enable row level security;
-revoke all on public.stock_presas from anon, authenticated;
+revoke all on public.stock_presas from anon;
+grant select on public.stock_presas to authenticated;
+drop policy if exists stock_presas_cajero_select on public.stock_presas;
+create policy stock_presas_cajero_select on public.stock_presas for select to authenticated
+  using (sucursal_id=(select roly_private.cajero_sucursal()));
 
 create or replace function public.agregar_pollos_stock(p_sucursal uuid,p_broaster integer,p_espiedo integer)
 returns void
