@@ -12,7 +12,7 @@ import EmployeeFaceEnrollment from './EmployeeFaceEnrollment';
 import { groupPurchases, purchaseTotal } from '../lib/purchases';
 import type { Mutation } from '../lib/supabase/operations';
 
-type Props = { section: string; data: Data; saving: boolean; update: (next: Data, message: string) => Promise<boolean>; mutate: (operation: Mutation, message: string) => Promise<boolean>; refresh: () => Promise<void>; notify: (message: string) => void; mutationError: string; clearMutationError: () => void; createUser: (values: {name:string;surname:string;phone:string;email:string;password:string;role:string;branch:string}) => Promise<{ok:boolean;error?:string;message?:string}>; deleteUser: (id: string) => Promise<{ok:boolean;error?:string}>; saveEmployeeFace: (id: string, descriptor: number[], consent: boolean) => Promise<{ok:boolean;error?:string}> };
+type Props = { section: string; data: Data; saving: boolean; update: (next: Data, message: string) => Promise<boolean>; mutate: (operation: Mutation, message: string) => Promise<boolean>; refresh: () => Promise<void>; notify: (message: string) => void; mutationError: string; clearMutationError: () => void; createUser: (values: {name:string;surname:string;phone:string;email:string;password:string;role:string;branch:string;weekdayDailyPay:number;weekendDailyPay:number}) => Promise<{ok:boolean;error?:string;message?:string}>; deleteUser: (id: string) => Promise<{ok:boolean;error?:string}>; saveEmployeeFace: (id: string, descriptor: number[], consent: boolean) => Promise<{ok:boolean;error?:string}> };
 type Collection = 'suppliers' | 'notices' | 'users' | 'employees' | 'staffPayments' | 'finances' | 'snackStocks' | 'beverageStocks' | 'purchases' | 'shifts' | 'cashMovements' | 'closeShift';
 type Field = { key: string; label: string; type?: string; options?: { value: string; label: string }[]; required?: boolean; value?: string | number; min?: number; max?: number; step?: number };
 type Editor = { collection: Collection; id?: string; values: Record<string, string | number | boolean | null>; title: string };
@@ -51,7 +51,7 @@ export default function AdminModules({ section, data, saving, update, mutate, no
   };
   const search = (cells: React.ReactNode[]) => cells.map(c => typeof c === 'object' ? '' : String(c)).join(' ').toLowerCase().includes(query.toLowerCase());
   const field = (key: string, label: string, type = 'text', required = true): Field => ({ key, label, type, required });
-  const amount = (key = 'amount', label = 'Monto (Bs)', min = .01): Field => ({ ...field(key, label, 'number'), min, max: 10000000 });
+  const amount = (key = 'amount', label = 'Monto (Bs)', min = .01): Field => ({ ...field(key, label, 'number'), min, max: 10000000, value: min === 0 ? 0 : undefined });
   const select = (key: string, label: string, values: Field['options']): Field => ({ key, label, options: values, required: true });
   const branchField = select('branch', 'Sucursal', branchOptions);
   const dateField = { ...field('date', 'Fecha', 'date'), value: localDate() };
