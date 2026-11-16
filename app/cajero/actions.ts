@@ -26,7 +26,14 @@ function message(error: { message?: string; code?: string; details?: string; hin
     if (detail) return `Supabase no encontró la función solicitada: ${detail}`;
     return `Supabase no encontró la función necesaria (${fallback}). Revisa la migración que la crea.`;
   }
-  if (error?.code === 'PGRST204' || error?.code === '42703') return 'Falta la columna de personalización del pedido. Ejecuta database/14_personalizacion_pollo.sql en Supabase.';
+  if (error?.code === 'PGRST204') {
+    const detail = [error.message, error.details, error.hint].filter(Boolean).join(' · ');
+    return `PostgREST no reconoce una columna en su caché de esquema: ${detail || 'recarga el esquema de Supabase con NOTIFY pgrst, \'reload schema\'.'}`;
+  }
+  if (error?.code === '42703') {
+    const detail = [error.message, error.details, error.hint].filter(Boolean).join(' · ');
+    return `PostgreSQL no encontró una columna solicitada: ${detail || fallback}`;
+  }
   if (error?.code === 'PGRST205' || error?.code === '42P01') return 'Falta el inventario de bebidas. Ejecuta database/15_inventario_bebidas.sql en Supabase.';
   return error?.message || fallback;
 }
