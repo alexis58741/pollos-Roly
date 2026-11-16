@@ -19,9 +19,13 @@ function customizationLabel(choice: ChickenCustomization) {
   return `${choice.piece} ${choice.preparation}${choice.accompaniments.length ? ` · ${choice.accompaniments.join(', ')}` : ' · Sin acompañamientos'}`;
 }
 
-function message(error: { message?: string; code?: string } | null, fallback: string) {
+function message(error: { message?: string; code?: string; details?: string; hint?: string } | null, fallback: string) {
   if (error?.code === '42501') return 'No tienes permiso para esta operación. Confirma que ejecutaste database/11_cajero.sql en Supabase.';
-  if (error?.code === 'PGRST202' || error?.code === '42883') return 'Faltan funciones de caja o pedidos. Ejecuta database/11_cajero.sql, database/12_cajero_pedidos.sql, database/13_cajero_pagos_mixtos.sql y database/14_personalizacion_pollo.sql en Supabase.';
+  if (error?.code === 'PGRST202' || error?.code === '42883') {
+    const detail = [error.message, error.details, error.hint].filter(Boolean).join(' · ');
+    if (detail) return `Supabase no encontró la función solicitada: ${detail}`;
+    return `Supabase no encontró la función necesaria (${fallback}). Revisa la migración que la crea.`;
+  }
   if (error?.code === 'PGRST204' || error?.code === '42703') return 'Falta la columna de personalización del pedido. Ejecuta database/14_personalizacion_pollo.sql en Supabase.';
   if (error?.code === 'PGRST205' || error?.code === '42P01') return 'Falta el inventario de bebidas. Ejecuta database/15_inventario_bebidas.sql en Supabase.';
   return error?.message || fallback;
@@ -107,7 +111,9 @@ export async function addWholeChickensToStock(broaster: number, espiedo: number)
   try {
     const { db, profile } = await requireCashier();
     const { error } = await db.rpc('agregar_pollos_stock', { p_sucursal: profile.sucursal_id, p_broaster: broaster, p_espiedo: espiedo });
-    if (error) throw new Error(message(error, 'No se pudo agregar el stock de pollos.'));
+    if (error) throw new Error(error.code === 'PGRST202' || error.code === '42883'
+      ? `No se encontró agregar_pollos_stock(p_sucursal, p_broaster, p_espiedo). Verifica que ejecutaste database/26_stock_presas.sql. Detalle: ${error.message || error.code}`
+      : message(error, 'No se pudo agregar el stock de pollos.'));
     revalidatePath('/cajero');
     return { ok: true as const };
   } catch (error) { return { error: error instanceof Error ? error.message : 'No se pudo agregar el stock.' }; }
