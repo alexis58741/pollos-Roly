@@ -72,6 +72,8 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
       throw new Error(error.code === '42501' ? 'Supabase no permite consultar las asistencias desde el administrador. Revisa las políticas del script 06.' : error.message);
     }
     if (!entries?.length) return { records: [] };
+    const { data: schedule, error: scheduleError } = await db.from('configuracion').select('hora_entrada_asistencia,tolerancia_asistencia_minutos').eq('id', 1).maybeSingle();
+    if (scheduleError) throw new Error(friendly(scheduleError));
     const { data: fines, error: finesError } = await db.from('multas_asistencia').select('asistencia_id,monto,minutos_tarde').in('asistencia_id', entries.map(entry => entry.id));
     if (finesError) {
       if (finesError.code === '42P01' || finesError.code === 'PGRST205') throw new Error('Falta habilitar las multas automáticas. Ejecuta database/21_multas_asistencia.sql en Supabase.');
@@ -79,17 +81,29 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
     }
     const fineByAttendanceId = new Map((fines || []).map(fine => [fine.asistencia_id, fine]));
     const ids = [...new Set(entries.map(entry => entry.empleado_id).filter((id): id is string => Boolean(id)))];
-    const { data: profiles, error: profilesError } = await db.from('perfiles').select('id,nombre,apellido,rol,sucursal_id').in('id', ids);
+    const { data: profiles, error: profilesError } = await db.from('perfiles').select('id,nombre,apellido,rol,sucursal_id,pago_diario_semana,pago_diario_fin_semana').in('id', ids);
     if (profilesError) throw new Error(profilesError.message);
     const byId = new Map((profiles || []).map(profile => [profile.id, profile]));
     const personalIds = [...new Set(entries.map(entry => entry.personal_id).filter((id): id is string => Boolean(id)))];
     const { data: staff, error: staffError } = personalIds.length
-      ? await db.from('personal_operativo').select('id,nombre,rol,sucursal_id').in('id', personalIds)
+      ? await db.from('personal_operativo').select('id,nombre,rol,sucursal_id,pago_diario_semana,pago_diario_fin_semana').in('id', personalIds)
       : { data: [], error: null };
     if (staffError) throw new Error(staffError.message);
     const dataPersonal = new Map((staff || []).map(person => [person.id, person]));
     return { records: entries.map(entry => {
       const profile = byId.get(entry.empleado_id);
+      const fine = fineByAttendanceId.get(entry.id);
+      const [year, month, day] = date.split('-').map(Number);
+      const [hour, minute] = String(schedule?.hora_entrada_asistencia || '00:00').slice(0, 5).split(':').map(Number);
+      const deadline = Date.UTC(year, month - 1, day, hour, minute + Number(schedule?.tolerancia_asistencia_minutos || 0)) + 4 * 60 * 60 * 1000;
+      const calculatedLate = schedule?.hora_entrada_asistencia
+        ? Math.max(0, Math.ceil((Date.parse(entry.registrada_en) - deadline) / 60000))
+        : 0;
+      const lateMinutes = Math.max(Number(fine?.minutos_tarde || 0), calculatedLate);
+      const person = entry.personal_id ? dataPersonal.get(entry.personal_id) : profile;
+      const isWeekend = new Date(`${date}T12:00:00Z`).getUTCDay() === 0 || new Date(`${date}T12:00:00Z`).getUTCDay() === 6;
+      const dailyPay = Number(isWeekend ? person?.pago_diario_fin_semana || 0 : person?.pago_diario_semana || 0);
+      const calculatedFine = dailyPay > 0 ? Math.round((dailyPay / 480) * lateMinutes * 100) / 100 : 0;
       return {
         id: entry.id,
         employeeId: entry.empleado_id || entry.personal_id,
@@ -98,8 +112,8 @@ export async function loadAttendanceRecords(date: string): Promise<{ records?: A
         branch: entry.personal_id ? (dataPersonal.get(entry.personal_id)?.sucursal_id || '') : profile?.sucursal_id || '',
         timestamp: entry.registrada_en,
         exitTimestamp: entry.salida_en || null,
-        lateMinutes: fineByAttendanceId.get(entry.id)?.minutos_tarde || 0,
-        fineAmount: Number(fineByAttendanceId.get(entry.id)?.monto || 0),
+        lateMinutes,
+        fineAmount: Number(fine?.monto || 0) || calculatedFine,
       };
     }) };
   } catch (error) {
