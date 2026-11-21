@@ -119,6 +119,10 @@ Para que el Cajero pueda ver los avisos publicados para su sucursal y recibirlos
 
 Para habilitar el botón **Eliminar** del apartado Insumos, ejecuta `17_eliminar_insumo.sql` en Supabase. Solo un administrador puede eliminar un insumo sin compras relacionadas; los insumos usados en compras permanecen para proteger el historial.
 
+En **Sucursales**, el formulario permite crear y editar, el botón de encendido activa o desactiva, y **Eliminar** borra solo sucursales sin registros relacionados. Ejecuta `35_eliminar_sucursal.sql` en Supabase; si una sucursal ya tiene actividad, desactívala para conservar su historial.
+
+En **Menú → Platos y productos**, puedes crear, editar, pausar/reactivar y eliminar productos sin ventas ni inventario asociado. En **Menú → Categorías**, puedes crear, editar, archivar/reactivar y eliminar categorías sin productos vinculados. Ejecuta `36_eliminar_catalogo.sql` en Supabase para habilitar la eliminación segura.
+
 Para habilitar **Eliminar cuenta** en Usuarios del Sistema, ejecuta `18_eliminar_usuario.sql` en Supabase. No permite eliminar la sesión propia ni cuentas vinculadas a asistencias, ventas, turnos, compras o pagos; en esos casos desactiva la cuenta para preservar el historial.
 
 Para configurar una hora de entrada y una tolerancia generales para todos los empleados, ejecuta `20_tiempo_asistencia_general.sql` en Supabase. El apartado **Tiempo asistencia** guarda un único horario global para el personal activo, incluidos cajeros y cocineros.
@@ -128,6 +132,8 @@ Si el Administrador ve un error de permisos al guardar esa configuración, ejecu
 Para activar el registro de tardanzas y multas, ejecuta `21_multas_asistencia.sql` después de las migraciones 20 y 06. La hora y tolerancia se configuran desde **Tiempo asistencia**.
 
 Para que el kiosco de `/asistencia` también identifique personal sin cuenta y conserve la marcación facial del Cajero, ejecuta `25_personal_sin_cuenta.sql` después de `21_multas_asistencia.sql` y `24_asistencia_kiosco.sql`. La migración conserva las asistencias y plantillas existentes, y permite asociar nuevos registros a `personal_operativo`. El Administrador registra los rostros desde **Empleados**; los Cajeros conservan la plantilla de su cuenta y marcan en la misma tablet. Después de ejecutar el script, actualiza la página.
+
+Para que la tablet muestre el nombre reconocido y pida confirmación antes de guardar la asistencia, ejecuta `37_confirmacion_asistencia.sql` después de la migración 25. Si el rostro se identifica con un nombre incorrecto, al pulsar **No soy yo** no se guarda la marcación ni su multa.
 
 La migración `27_sueldo_y_multa_proporcional.sql` guardaba el sueldo mensual y fue reemplazada por el cálculo diario diferenciado de la migración 28. Si ya ejecutaste la 27, conserva sus datos; luego ejecuta también la 28.
 

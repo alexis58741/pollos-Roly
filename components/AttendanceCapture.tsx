@@ -39,6 +39,8 @@ export default function AttendanceCapture({ enrollmentName, enrollmentRole }: { 
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
+  const [pendingDescriptor, setPendingDescriptor] = useState<number[] | null>(null);
   const [consent, setConsent] = useState(false);
   const [employee, setEmployee] = useState<{ name: string; role: string; registeredAt: string; alreadyMarked: boolean } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -50,7 +52,7 @@ export default function AttendanceCapture({ enrollmentName, enrollmentRole }: { 
   useEffect(() => () => stopCamera(), []);
 
   async function startCamera() {
-    setError(''); setMessage(''); setSaved(false); setEmployee(null);
+    setError(''); setMessage(''); setSaved(false); setAwaitingConfirmation(false); setPendingDescriptor(null); setEmployee(null);
     frontEmbeddingRef.current = null; frontYawRef.current = null;
     if (!navigator.mediaDevices?.getUserMedia) { setError('Este navegador no permite usar la cámara en esta conexión. Abre esta pantalla en localhost o HTTPS.'); return; }
     try {
@@ -103,6 +105,12 @@ export default function AttendanceCapture({ enrollmentName, enrollmentRole }: { 
       startTransition(async () => {
         const response = enrollmentName ? await enrollFaceAndMarkAttendance(form) : await markAttendance(form);
         if (response.error) { setError(response.error); setMessage(''); }
+        else if (response.confirmationRequired) {
+          setEmployee({ name: response.name || 'Empleado', role: response.role || 'Personal', registeredAt: new Date().toISOString(), alreadyMarked: false });
+          setPendingDescriptor(averaged);
+          setAwaitingConfirmation(true);
+          setMessage('');
+        }
         else {
           if (response.redirectTo === '/cajero') {
             router.replace('/cajero');
@@ -117,6 +125,30 @@ export default function AttendanceCapture({ enrollmentName, enrollmentRole }: { 
     finally { setChecking(false); }
   }
 
+  function confirmIdentity() {
+    if (!pendingDescriptor || isPending) return;
+    const form = new FormData();
+    form.set('descriptor', JSON.stringify(pendingDescriptor));
+    form.set('confirm', 'accepted');
+    startTransition(async () => {
+      const response = await markAttendance(form);
+      if (response.error) { setError(response.error); return; }
+      if (response.redirectTo === '/cajero') { router.replace('/cajero'); router.refresh(); return; }
+      setEmployee({ name: response.name || 'Empleado', role: response.role || 'Personal', registeredAt: response.registeredAt || new Date().toISOString(), alreadyMarked: Boolean(response.alreadyMarked) });
+      setAwaitingConfirmation(false);
+      setPendingDescriptor(null);
+      setSaved(true);
+    });
+  }
+
+  function rejectIdentity() {
+    setAwaitingConfirmation(false);
+    setPendingDescriptor(null);
+    setEmployee(null);
+    setError('');
+    setMessage('No se registró asistencia. Si el nombre no coincide, avisa al administrador para revisar el registro facial.');
+  }
+
   const registeredLabel = employee ? new Intl.DateTimeFormat('es-BO', { timeZone: 'America/La_Paz', hour: '2-digit', minute: '2-digit' }).format(new Date(employee.registeredAt)) : '';
 
   return <main className="attendance-page attendance-kiosk">
@@ -124,7 +156,7 @@ export default function AttendanceCapture({ enrollmentName, enrollmentRole }: { 
     <section className="attendance-card kiosk-card">
       <div className="attendance-greeting"><span className="attendance-icon"><UserRound size={28}/></span><p className="eyebrow">MARCA TU ASISTENCIA</p><h1>{saved ? (employee?.alreadyMarked ? 'Asistencia ya registrada' : '¡Asistencia marcada!') : enrollmentName ? `Hola, ${enrollmentName}` : 'Bienvenido al trabajo'}</h1><p className="subtitle">{saved ? 'Registro identificado en el sistema.' : enrollmentName ? `${enrollmentRole} · Registra tu rostro una vez. Después podrás marcar asistencia desde esta tablet sin iniciar sesión.` : 'Colócate frente a la cámara para identificarte y registrar tu hora de entrada.'}</p></div>
       {error && <div className="error-banner attendance-error" role="alert"><CircleAlert size={18}/>{error}</div>}
-      {saved && employee ? <div className="attendance-done kiosk-done"><span><Check size={30}/></span><h2>{employee.name}</h2><p>{employee.role} · {employee.alreadyMarked ? 'Ya habías marcado tu entrada hoy a las' : 'Hora de entrada de hoy:'} <strong>{registeredLabel}</strong></p><p className="kiosk-thanks">Gracias. Esta pantalla está lista para la siguiente persona.</p><button className="button primary kiosk-next" onClick={() => { setSaved(false); setEmployee(null); setError(''); }}>Listo · Siguiente persona</button></div> : <>
+      {saved && employee ? <div className="attendance-done kiosk-done"><span><Check size={30}/></span><h2>{employee.name}</h2><p>{employee.role} · {employee.alreadyMarked ? 'Ya habías marcado tu entrada hoy a las' : 'Hora de entrada de hoy:'} <strong>{registeredLabel}</strong></p><p className="kiosk-thanks">Gracias. Esta pantalla está lista para la siguiente persona.</p><button className="button primary kiosk-next" onClick={() => { setSaved(false); setEmployee(null); setError(''); }}>Listo · Siguiente persona</button></div> : awaitingConfirmation && employee ? <div className="attendance-done kiosk-done"><span><UserRound size={30}/></span><h2>¿Eres {employee.name}?</h2><p>Confirma tu identidad antes de registrar la asistencia. Si el nombre no es tuyo, no se guardará ninguna marcación.</p><div className="attendance-confirm-actions"><button className="button" disabled={isPending} onClick={rejectIdentity}>No soy yo</button><button className="button primary" disabled={isPending || !pendingDescriptor} onClick={confirmIdentity}>{isPending ? <LoaderCircle className="attendance-spin" size={17}/> : <Check size={17}/>} Sí, marcar asistencia</button></div></div> : <>
         <div className="attendance-camera" style={{ display: step >= 0 ? 'block' : 'none' }}><video ref={videoRef} autoPlay muted playsInline aria-label="Vista previa de la cámara"/><div className="attendance-camera-prompt"><span>VERIFICACIÓN {step + 1} DE 3</span><strong>{prompts[Math.max(0, step)]}</strong><small>El sistema compara la plantilla facial registrada.</small></div></div>
         {message && <p className="attendance-message" role="status">{isPending ? <LoaderCircle className="attendance-spin" size={17}/> : <CircleAlert size={17}/>} {message}</p>}
         {step >= 0 ? <div className="attendance-actions"><button className="button primary" onClick={validatePose} disabled={!modelReady || checking || isPending}>{checking || isPending ? <LoaderCircle className="attendance-spin" size={18}/> : <Check size={18}/>} {checking ? 'Verificando…' : isPending ? 'Buscando…' : 'Comprobar y continuar'}</button></div> : <div className="attendance-start kiosk-start">

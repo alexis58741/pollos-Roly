@@ -17,6 +17,7 @@ export type KioskAttendanceResult = {
   role?: string;
   registeredAt?: string;
   alreadyMarked?: boolean;
+  confirmationRequired?: boolean;
   redirectTo?: '/cajero';
 };
 
@@ -32,14 +33,18 @@ export async function markAttendance(form: FormData): Promise<KioskAttendanceRes
 
   try {
     const db = await createClient();
-    const { data, error } = await db.rpc('marcar_asistencia_kiosco', { p_descriptor: descriptor });
+    const confirmed = form.get('confirm') === 'accepted';
+    const { data, error } = await db.rpc('marcar_asistencia_kiosco', { p_descriptor: descriptor, p_confirm: confirmed });
     if (error) {
-      if (error.code === '42883' || error.code === 'PGRST202') return { error: 'Falta habilitar el modo de tablet. Ejecuta database/24_asistencia_kiosco.sql en Supabase.' };
-      if (error.code === '42501') return { error: 'Supabase aún no permite registrar desde esta tablet. Ejecuta database/24_asistencia_kiosco.sql.' };
+      if (error.code === '42883' || error.code === 'PGRST202') return { error: 'Falta habilitar la confirmación de asistencia. Ejecuta database/37_confirmacion_asistencia.sql en Supabase.' };
+      if (error.code === '42501') return { error: 'Supabase aún no permite registrar desde esta tablet. Ejecuta database/37_confirmacion_asistencia.sql.' };
       return { error: 'No se pudo consultar la asistencia. Comprueba la conexión e inténtalo otra vez.' };
     }
     const result = Array.isArray(data) ? data[0] : data;
     if (!result?.success) return { error: result?.message || 'No encontramos un rostro registrado. Pide al administrador que registre la plantilla facial.' };
+    if (result.message === 'CONFIRMATION_REQUIRED') {
+      return { confirmationRequired: true, name: result.employee_name, role: result.employee_role };
+    }
     revalidatePath('/asistencia');
     revalidatePath('/admin/asistencia');
     revalidatePath('/cajero');

@@ -398,6 +398,72 @@ export async function deleteStockRecord(id: string): Promise<{ ok: boolean; data
   }
 }
 
+/** Elimina una sucursal únicamente si no tiene datos relacionados que deban conservarse. */
+export async function deleteBranchRecord(id: string): Promise<{ ok: boolean; data?: Data; error?: string }> {
+  let deleted = false;
+  try {
+    if (typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('Selecciona una sucursal válida.');
+    }
+    const { db, user } = await requireAdmin();
+    const { error } = await db.rpc('eliminar_sucursal_si_sin_datos', { p_sucursal: id });
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') {
+        throw new Error('Falta habilitar la eliminación segura de sucursales. Ejecuta database/35_eliminar_sucursal.sql en Supabase.');
+      }
+      if (error.code === '23503' || error.message?.includes('sucursal_con_datos')) {
+        throw new Error('No se puede eliminar esta sucursal porque tiene información vinculada. Desactívala para conservar el historial.');
+      }
+      throw new Error(friendly(error));
+    }
+    deleted = true;
+    try { return { ok: true, data: await readData(db, user.id) }; }
+    catch { return { ok: true, error: 'Sucursal eliminada. Actualiza los datos para refrescar la lista.' }; }
+  } catch (error) {
+    return deleted
+      ? { ok: true, error: 'Sucursal eliminada. Actualiza los datos para refrescar la lista.' }
+      : { ok: false, error: error instanceof Error ? error.message : 'No se pudo eliminar la sucursal.' };
+  }
+}
+
+/** Elimina productos o categorías sin relaciones, conservando el historial comercial. */
+export async function deleteCatalogRecord(kind: 'product' | 'category', id: string): Promise<{ ok: boolean; data?: Data; error?: string }> {
+  let deleted = false;
+  try {
+    if (!['product', 'category'].includes(kind) || typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      throw new Error('Selecciona un registro válido del catálogo.');
+    }
+    const { db, user } = await requireAdmin();
+    const table = kind === 'product' ? 'productos' : 'categorias';
+    const { data: existing, error: lookupError } = await db.from(table).select(kind === 'product' ? 'foto_path' : 'id').eq('id', id).maybeSingle();
+    if (lookupError) throw new Error(friendly(lookupError));
+    if (!existing) throw new Error('El registro ya no existe. Actualiza los datos.');
+    const photoPath = kind === 'product' && 'foto_path' in existing ? existing.foto_path : null;
+    const { error } = await db.rpc('eliminar_catalogo_sin_referencias', { p_tipo: kind, p_id: id });
+    if (error) {
+      if (error.code === 'PGRST202' || error.code === '42883') {
+        throw new Error('Falta habilitar la eliminación segura del catálogo. Ejecuta database/36_eliminar_catalogo.sql en Supabase.');
+      }
+      if (error.code === '23503' || error.message?.includes('catalogo_con_referencias')) {
+        throw new Error(kind === 'product'
+          ? 'No se puede eliminar este producto porque ya tiene ventas o inventario relacionado. Puedes pausarlo para conservar el historial.'
+          : 'No se puede eliminar esta categoría porque tiene productos relacionados. Mueve o elimina esos productos primero.');
+      }
+      throw new Error(friendly(error));
+    }
+    deleted = true;
+    if (typeof photoPath === 'string' && photoPath) {
+      await db.storage.from('productos').remove([photoPath]);
+    }
+    try { return { ok: true, data: await readData(db, user.id) }; }
+    catch { return { ok: true, error: 'Registro eliminado. Actualiza los datos para refrescar el catálogo.' }; }
+  } catch (error) {
+    return deleted
+      ? { ok: true, error: 'Registro eliminado. Actualiza los datos para refrescar el catálogo.' }
+      : { ok: false, error: error instanceof Error ? error.message : 'No se pudo eliminar el registro.' };
+  }
+}
+
 /** Elimina la cuenta de autenticación y el perfil solo cuando no hay registros históricos asociados. */
 export async function deleteSystemUser(id: string): Promise<{ ok: boolean; data?: Data; error?: string }> {
   try {
